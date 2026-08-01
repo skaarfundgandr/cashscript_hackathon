@@ -1,0 +1,20 @@
+{
+  "name": "parcel-tracker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "compile": "bun run scripts/compile.ts",
+    "dev": "bun run --filter '@parcel-tracker/backend' dev",
+    "dev:frontend": "bun run --filter '@parcel-tracker/frontend' dev",
+    "build": "bun run --filter '*' build"
+  },
+  "devDependencies": {
+    "cashc": "^0.13.0",
+    "cashscript": "^0.13.0",
+    "typescript": "^5.7.0"
+  }
+}
