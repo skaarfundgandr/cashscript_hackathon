@@ -372,7 +372,11 @@ The return QR is shown to the merchant when the courier hands the parcel back â€
 
 ---
 
-## 11. Projected File Structure
+## 11. References
+
+- **[SPEC/AUTH.md](./AUTH.md)** â€” Authentication flow, WalletConnect V2 BCH integration, `IWalletConnector` port, mock wallet for dev, actor key management for the demo.
+
+## 12. Projected File Structure
 
 ```
 cashscript_hackathon/
