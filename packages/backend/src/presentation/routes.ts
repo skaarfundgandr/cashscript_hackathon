@@ -1,47 +1,10 @@
-import { jwt } from '@elysiajs/jwt';
-import { Elysia, status, t } from 'elysia';
+import { Elysia, t } from 'elysia';
 import { container } from '../di/container.js';
-import { AuthController } from './controllers/auth.controller.js';
 import { ParcelController } from './controllers/parcel.controller.js';
 
 const parcelController = new ParcelController(container);
-const authController = new AuthController(container.auth);
 
-const publicRoutes = new Elysia()
-  .use(jwt({ name: 'jwt', secret: process.env.JWT_SECRET ?? 'dev-secret' }))
-  .get('/auth/challenge', ({ query }) => authController.getChallenge(query.address), {
-    query: t.Object({
-      address: t.String(),
-    }),
-  })
-  .post('/auth/verify', async ({ jwt: signer, body }) => {
-    if (!authController.verify(body.address, body.nonce, body.signature)) {
-      throw status(401, 'Invalid signature');
-    }
-    const token = await signer.sign({ sub: body.address });
-    return { token };
-  }, {
-    body: t.Object({
-      address: t.String(),
-      nonce: t.String(),
-      signature: t.String(),
-    }),
-  });
-
-const protectedRoutes = new Elysia()
-  .use(jwt({ name: 'jwt', secret: process.env.JWT_SECRET ?? 'dev-secret' }))
-  .derive(async ({ headers, jwt: signer }) => {
-    const auth = headers['authorization'];
-    if (!auth?.startsWith('Bearer ')) {
-      throw status(401, 'Missing or invalid authorization header');
-    }
-    const token = auth.slice(7);
-    const payload = await signer.verify(token);
-    if (!payload) {
-      throw status(401, 'Invalid or expired token');
-    }
-    return { user: { address: (payload as { sub: string }).sub } };
-  })
+export const routes = new Elysia()
   .post('/parcel/create', async ({ body }) => parcelController.create(body), {
     body: t.Object({
       merchantPk: t.String(),
@@ -92,8 +55,3 @@ const protectedRoutes = new Elysia()
       merchantPk: t.String(),
     }),
   });
-
-export const routes = new Elysia()
-  .use(jwt({ name: 'jwt', secret: process.env.JWT_SECRET ?? 'dev-secret' }))
-  .use(publicRoutes)
-  .use(protectedRoutes);
