@@ -1,19 +1,32 @@
 import { encodeCashAddress, hash160, hash256, hexToBin, secp256k1, utf8ToBin } from '@bitauth/libauth';
 import type { RecoveryId } from '@bitauth/libauth';
 import { IAuthService } from '../../application/ports/auth.js';
+import { MemoryNonceStore } from '../memory/nonce-store.js';
 
 const MESSAGE_PREFIX = 'Bitcoin Signed Message:\nParcelTracker Login\nNonce: ';
 const BCH_TEST_PREFIX = 'bchtest';
 
 export class LibauthAuthService implements IAuthService {
+  private readonly nonceStore: MemoryNonceStore;
+  private readonly nonceTtl: number;
+
+  constructor(nonceTtl: number = 300_000) {
+    this.nonceStore = new MemoryNonceStore();
+    this.nonceTtl = nonceTtl;
+  }
+
   generateChallenge(address: string): { nonce: string; message: string } {
     const nonceBytes = new Uint8Array(16);
     crypto.getRandomValues(nonceBytes);
     const nonce = Array.from(nonceBytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+    this.nonceStore.store(address, nonce, this.nonceTtl);
     return { nonce, message: this.formatMessage(nonce) };
   }
 
   verifySignature(address: string, nonce: string, signature: string): boolean {
+    if (!this.nonceStore.consume(address, nonce)) {
+      return false;
+    }
     try {
       const digest = hash256(utf8ToBin(this.formatMessage(nonce)));
       const sig = hexToBin(signature);

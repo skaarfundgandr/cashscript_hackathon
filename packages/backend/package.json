@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "bun run --watch src/main.ts",
+    "test": "bun test",
     "build": "tsc",
     "start": "bun run dist/main.js"
   },
