@@ -1,27 +1,21 @@
-import { ApiClient, type ParcelDto } from '../infrastructure/api-client.js';
+import { apiClient, type ParcelChainEntry } from '../infrastructure/api-client.js';
 
 const STATE_NAMES: Record<number, string> = {
   0: 'In Custody',
   1: 'Handoff Pending',
   2: 'Delivery Pending',
-  3: 'Delivered',
-  4: 'Rejected',
-  5: 'Return Pending',
-  6: 'Returned',
+  4: 'Delivered',
 };
 
 export class App {
-  private readonly api: ApiClient;
   private readonly trackForm: HTMLFormElement;
   private readonly trackInput: HTMLInputElement;
   private readonly parcelSection: HTMLElement;
   private readonly parcelInfo: HTMLDListElement;
   private readonly messageSection: HTMLElement;
   private readonly message: HTMLParagraphElement;
-  private parcel: ParcelDto | null = null;
 
   constructor() {
-    this.api = new ApiClient();
     this.trackForm = this.required<HTMLFormElement>('#track-form');
     this.trackInput = this.required<HTMLInputElement>('#track-contract-id');
     this.parcelSection = this.required<HTMLElement>('#parcel-section');
@@ -56,33 +50,22 @@ export class App {
     }
     try {
       this.setMessage('Fetching parcel...');
-      this.parcel = await this.api.getParcel(contractId);
-      this.renderParcel();
+      this.renderParcel(await apiClient.getParcel(contractId));
       this.setMessage('Parcel loaded');
     } catch (error) {
       this.setMessage(this.errorText(error), true);
     }
   }
 
-  private renderParcel(): void {
-    const parcel = this.parcel;
-    if (!parcel) {
-      return;
-    }
+  private renderParcel(chain: ParcelChainEntry[]): void {
     this.parcelSection.hidden = false;
     this.parcelInfo.replaceChildren();
-    const rows: Array<[string, string]> = [
-      ['Contract ID', parcel.contractId],
-      ['State', `${parcel.state} - ${STATE_NAMES[parcel.state] ?? 'Unknown'}`],
-      ['Custodian', parcel.custodian || '-'],
-      ['Recipient', parcel.recipientPkh],
-      ['Merchant', parcel.merchantPkh],
-    ];
-    for (const [label, value] of rows) {
+    for (const entry of chain) {
       const dt = document.createElement('dt');
-      dt.textContent = label;
+      dt.textContent = entry.txid;
       const dd = document.createElement('dd');
-      dd.textContent = value;
+      const state = `${entry.state} - ${STATE_NAMES[entry.state] ?? 'Unknown'}`;
+      dd.textContent = entry.custodian ? `${state} (${entry.custodian})` : state;
       this.parcelInfo.append(dt, dd);
     }
   }
