@@ -4,6 +4,4 @@ artifacts/
 .env
 *.log
 .DS_Store
-.agents/
-.claude/
 .opencode/
