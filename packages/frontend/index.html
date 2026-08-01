@@ -7,64 +7,67 @@
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
-    <header>
-      <nav>
-        <span class="brand">ParcelTracker</span>
-        <div id="wallet-status">
-          <span id="wallet-address" class="muted">Not connected</span>
-          <button id="connect-btn" type="button">Connect Wallet</button>
-          <button id="disconnect-btn" type="button" hidden>Disconnect</button>
-        </div>
-      </nav>
-    </header>
-    <main>
-      <section class="card" id="create-section">
-        <h2>Create Parcel</h2>
-        <form id="create-form">
-          <label>
-            Recipient Address
-            <input id="recipient-address" type="text" placeholder="bchtest:..." required />
-          </label>
-          <label>
-            Courier Address
-            <input id="courier-address" type="text" placeholder="bchtest:..." required />
-          </label>
-          <button type="submit">Create Parcel</button>
-        </form>
-      </section>
-      <section class="card" id="track-section">
-        <h2>Track Parcel</h2>
-        <form id="track-form">
-          <label>
-            Contract ID
-            <input id="track-contract-id" type="text" placeholder="contract address or id" required />
-          </label>
-          <button type="submit">Track</button>
-        </form>
-      </section>
-      <section class="card" id="parcel-section" hidden>
-        <h2>Parcel</h2>
-        <dl id="parcel-info"></dl>
-        <div id="actions">
-          <div id="handoff-row" hidden>
-            <label>
-              Next Custodian Address
-              <input id="next-custodian" type="text" placeholder="bchtest:..." />
-            </label>
-            <button id="btn-handoff" type="button">Handoff</button>
+    <div id="legacy-root">
+      <header>
+        <nav>
+          <span class="brand">ParcelTracker</span>
+          <div id="wallet-status">
+            <span id="wallet-address" class="muted">Not connected</span>
+            <button id="connect-btn" type="button">Connect Wallet</button>
+            <button id="disconnect-btn" type="button" hidden>Disconnect</button>
           </div>
-          <button id="btn-accept" type="button" hidden>Accept Handoff</button>
-          <button id="btn-deliver" type="button" hidden>Request Delivery</button>
-          <button id="btn-confirm" type="button" hidden>Confirm Delivery</button>
-          <button id="btn-reject" type="button" hidden>Reject Delivery</button>
-          <button id="btn-return" type="button" hidden>Return to Sender</button>
-          <button id="btn-confirm-return" type="button" hidden>Confirm Return</button>
-        </div>
-      </section>
-      <section class="card" id="message-section" hidden>
-        <p id="message"></p>
-      </section>
-    </main>
+        </nav>
+      </header>
+      <main>
+        <section class="card" id="create-section">
+          <h2>Create Parcel</h2>
+          <form id="create-form">
+            <label>
+              Recipient Address
+              <input id="recipient-address" type="text" placeholder="bchtest:..." required />
+            </label>
+            <label>
+              Courier Address
+              <input id="courier-address" type="text" placeholder="bchtest:..." required />
+            </label>
+            <button type="submit">Create Parcel</button>
+          </form>
+        </section>
+        <section class="card" id="track-section">
+          <h2>Track Parcel</h2>
+          <form id="track-form">
+            <label>
+              Contract ID
+              <input id="track-contract-id" type="text" placeholder="contract address or id" required />
+            </label>
+            <button type="submit">Track</button>
+          </form>
+        </section>
+        <section class="card" id="parcel-section" hidden>
+          <h2>Parcel</h2>
+          <dl id="parcel-info"></dl>
+          <div id="actions">
+            <div id="handoff-row" hidden>
+              <label>
+                Next Custodian Address
+                <input id="next-custodian" type="text" placeholder="bchtest:..." />
+              </label>
+              <button id="btn-handoff" type="button">Handoff</button>
+            </div>
+            <button id="btn-accept" type="button" hidden>Accept Handoff</button>
+            <button id="btn-deliver" type="button" hidden>Request Delivery</button>
+            <button id="btn-confirm" type="button" hidden>Confirm Delivery</button>
+            <button id="btn-reject" type="button" hidden>Reject Delivery</button>
+            <button id="btn-return" type="button" hidden>Return to Sender</button>
+            <button id="btn-confirm-return" type="button" hidden>Confirm Return</button>
+          </div>
+        </section>
+        <section class="card" id="message-section" hidden>
+          <p id="message"></p>
+        </section>
+      </main>
+    </div>
+    <div id="marketplace-root"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

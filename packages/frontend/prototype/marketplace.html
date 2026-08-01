@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<!--
+  PROTOTYPE — THROWAWAY. Do not promote this file.
+
+  Question (revised): the catalogue is a Shopee-style commerce screen — search,
+  sidebar filters, sort bar, dense product grid. Which styling language does it
+  wear? shadcn/ui and the Broadsheet design system disagree head-on, so all
+  three variants render THE SAME MARKUP under a different [data-skin], which
+  makes the comparison exact.
+
+  Run:  bun run dev            (from packages/frontend)
+  Open: http://localhost:5173/prototype/marketplace.html
+
+  NOTE: this reproduces shadcn's *look* in plain CSS. Real shadcn is React +
+  Tailwind + Radix, none of which this package has. See the handover notes.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE — marketplace layout</title>
+
+<style>
+  @font-face { font-family:'Source Serif 4'; font-style:normal; font-weight:400;
+    font-display:swap; src:url('./fonts/ss4-latin.woff2') format('woff2'); }
+  @font-face { font-family:'Source Serif 4'; font-style:normal; font-weight:600;
+    font-display:swap; src:url('./fonts/ss4-latin.woff2') format('woff2'); }
+  @font-face { font-family:'Source Serif 4'; font-style:italic; font-weight:400;
+    font-display:swap; src:url('./fonts/ss4-latin-italic.woff2') format('woff2'); }
+</style>
+
+<style>
+/* ══ prototype chrome — NOT part of the design being judged ════════════════ */
+.proto-bar{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);
+  display:flex;align-items:center;gap:4px;z-index:9999;background:#16181d;
+  color:#f3f2f2;border-radius:999px;padding:5px 6px;
+  box-shadow:0 8px 28px rgba(0,0,0,.34);
+  font:500 13px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
+.proto-bar button{all:unset;cursor:pointer;width:30px;height:30px;
+  border-radius:999px;display:grid;place-items:center;font-size:15px}
+.proto-bar button:hover{background:rgba(255,255,255,.14)}
+.proto-bar .lbl{padding:0 12px;white-space:nowrap}
+.proto-bar .lbl b{color:#7fd8ff;font-weight:600}
+.proto-note{position:fixed;left:16px;bottom:22px;z-index:9999;max-width:262px;
+  background:#16181d;color:#c9c6c2;border-radius:10px;padding:10px 13px;
+  box-shadow:0 8px 28px rgba(0,0,0,.34);
+  font:400 11.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+.proto-note b{color:#f3f2f2;display:block;margin-bottom:3px;font-weight:600}
+
+/* ══ layout skeleton — identical in every skin ═════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0}
+.topbar{display:flex;align-items:center;gap:26px;padding:14px 32px}
+.brand{font-weight:600;white-space:nowrap}
+.topnav{display:flex;align-items:center;gap:18px;margin-left:auto;
+  white-space:nowrap}
+
+/* the search row — its own band under the header, never inside it */
+.searchrow{display:flex;align-items:center;gap:10px;max-width:1360px;
+  margin:0 auto;padding:22px 32px 0}
+.searchfield{position:relative;flex:1;display:flex}
+.searchfield input{width:100%;padding-left:38px}
+.searchfield .ic{position:absolute;left:13px;top:50%;transform:translateY(-50%);
+  width:16px;height:16px;pointer-events:none;opacity:.5}
+.iconbtn{position:relative;flex:none;display:inline-grid;place-items:center;
+  cursor:pointer}
+.iconbtn svg{width:17px;height:17px}
+.iconbtn .dot{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;
+  border-radius:999px;display:grid;place-items:center;padding:0 5px;
+  font-size:10.5px;font-weight:700;line-height:1}
+
+.shell{display:grid;grid-template-columns:236px 1fr;gap:34px;
+  max-width:1360px;margin:0 auto;padding:24px 32px 150px}
+.shell.nofilters{grid-template-columns:1fr}
+.shell.nofilters .filters{display:none}
+.filters section{margin-bottom:26px}
+.filters h3{margin:0 0 12px}
+.opt{display:flex;align-items:center;gap:9px;padding:5px 0;cursor:pointer}
+.opt input{margin:0}
+.opt .cnt{margin-left:auto}
+.range{display:flex;align-items:center;gap:8px}
+.range input{width:100%;min-width:0}
+.sortbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:11px 14px;margin-bottom:22px}
+.sortbar .spacer{margin-left:auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(208px,1fr));
+  gap:18px}
+.pcard{display:flex;flex-direction:column;cursor:pointer}
+.pcard .art{aspect-ratio:1;display:grid;place-items:center;overflow:hidden}
+.pcard .art svg{width:64%;height:64%}
+.pbody{display:flex;flex-direction:column;flex:1;gap:6px}
+.pname{margin:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden}
+.pmeta{display:flex;align-items:center;gap:6px;margin-top:auto}
+.stars{display:inline-flex;gap:1px}
+.stars svg{width:12px;height:12px}
+.empty{padding:70px 0;text-align:center}
+.chips{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+
+/* ══ product detail — skeleton ═════════════════════════════════════════════ */
+.detail{max-width:1360px;margin:0 auto;padding:20px 32px 150px}
+.crumbs{display:flex;align-items:center;gap:8px;padding:0 0 22px;flex-wrap:wrap}
+.crumbs a{text-decoration:none;cursor:pointer}
+.dgrid{display:grid;grid-template-columns:minmax(0,500px) minmax(0,1fr);gap:56px;
+  align-items:start}
+.gallery .hero-art{aspect-ratio:1;display:grid;place-items:center;overflow:hidden}
+.gallery .hero-art svg{width:56%;height:56%}
+.thumbs{display:flex;gap:12px;margin-top:14px}
+.thumb{width:76px;height:76px;display:grid;place-items:center;cursor:pointer;
+  overflow:hidden;flex:none}
+.thumb svg{width:56%;height:56%}
+.buybox{display:flex;flex-direction:column;gap:0;max-width:560px}
+.buybox > .badge{align-self:flex-start}
+.dtitle{margin:12px 0 0;line-height:1.18}
+.drating{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:12px}
+.dprice{margin-top:22px}
+.dlede{margin:20px 0 0}
+.specs{margin:24px 0 0;display:grid;grid-template-columns:auto 1fr;
+  gap:10px 22px}
+.specs dt{margin:0}
+.specs dd{margin:0}
+.dactions{display:flex;gap:10px;margin-top:28px}
+.dactions .btn-buy{flex:1}
+.note{display:flex;gap:12px;margin-top:22px;align-items:flex-start}
+.note svg{width:17px;height:17px;flex:none;margin-top:2px}
+.note p{margin:5px 0 0}
+.dsections{margin-top:64px;display:grid;
+  grid-template-columns:minmax(0,500px) minmax(0,1fr);gap:56px}
+.dsections h2{margin:0 0 14px}
+.receipt{margin-top:22px;padding:16px 18px}
+.receipt .row{display:flex;justify-content:space-between;gap:16px;padding:3px 0}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SKIN 1 — shadcn/ui (new-york, neutral). Tokens transcribed from the real
+   default theme; component metrics match the actual Tailwind recipes.
+   ══════════════════════════════════════════════════════════════════════════ */
+[data-skin="shadcn"]{
+  --background:0 0% 100%; --foreground:0 0% 3.9%;
+  --card:0 0% 100%; --muted:0 0% 96.1%; --muted-foreground:0 0% 45.1%;
+  --border:0 0% 89.8%; --primary:0 0% 9%; --primary-foreground:0 0% 98%;
+  --accent:0 0% 96.1%; --ring:0 0% 3.9%; --radius:.5rem;
+  background:hsl(var(--background)); color:hsl(var(--foreground));
+  font:400 14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,
+    "Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+[data-skin="shadcn"] .topbar{border-bottom:1px solid hsl(var(--border));
+  position:sticky;top:0;background:hsl(var(--background)/.88);
+  backdrop-filter:blur(8px);z-index:40}
+[data-skin="shadcn"] .brand{font-size:15px;letter-spacing:-.01em}
+[data-skin="shadcn"] input[type=text],[data-skin="shadcn"] input[type=number]{
+  height:36px;border:1px solid hsl(var(--border));border-radius:calc(var(--radius) - 2px);
+  padding:0 12px;font:inherit;font-size:14px;background:hsl(var(--background));
+  color:inherit;outline:none;transition:box-shadow .15s,border-color .15s}
+[data-skin="shadcn"] input::placeholder{color:hsl(var(--muted-foreground))}
+[data-skin="shadcn"] input:focus{border-color:hsl(var(--ring));
+  box-shadow:0 0 0 3px hsl(var(--ring)/.12)}
+[data-skin="shadcn"] .btn{all:unset;box-sizing:border-box;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  height:36px;padding:0 16px;border-radius:calc(var(--radius) - 2px);
+  font-size:14px;font-weight:500;white-space:nowrap;transition:background .15s}
+[data-skin="shadcn"] .btn-primary{background:hsl(var(--primary));
+  color:hsl(var(--primary-foreground))}
+[data-skin="shadcn"] .btn-primary:hover{background:hsl(var(--primary)/.9)}
+[data-skin="shadcn"] .btn-outline{border:1px solid hsl(var(--border))}
+[data-skin="shadcn"] .btn-outline:hover{background:hsl(var(--accent))}
+[data-skin="shadcn"] .btn-ghost{padding:0 12px}
+[data-skin="shadcn"] .btn-ghost:hover{background:hsl(var(--accent))}
+[data-skin="shadcn"] .btn-sm{height:32px;padding:0 12px;font-size:13px}
+[data-skin="shadcn"] .searchfield input{height:40px;font-size:14.5px;
+  padding-left:38px}
+[data-skin="shadcn"] .iconbtn{width:40px;height:40px;
+  border:1px solid hsl(var(--border));border-radius:calc(var(--radius) - 2px);
+  background:hsl(var(--background));transition:background .15s}
+[data-skin="shadcn"] .iconbtn:hover{background:hsl(var(--accent))}
+[data-skin="shadcn"] .iconbtn[aria-expanded=true]{background:hsl(var(--accent))}
+[data-skin="shadcn"] .iconbtn .dot{background:hsl(var(--primary));
+  color:hsl(var(--primary-foreground))}
+[data-skin="shadcn"] .topnav a{color:hsl(var(--muted-foreground));
+  text-decoration:none;font-size:14px;font-weight:500}
+[data-skin="shadcn"] .topnav a:hover{color:hsl(var(--foreground))}
+[data-skin="shadcn"] .filters h3{font-size:14px;font-weight:600;
+  letter-spacing:-.01em}
+[data-skin="shadcn"] .filters section{padding-bottom:22px;
+  border-bottom:1px solid hsl(var(--border))}
+[data-skin="shadcn"] .filters section:last-child{border-bottom:0}
+[data-skin="shadcn"] .opt{font-size:14px}
+[data-skin="shadcn"] .opt input{appearance:none;width:16px;height:16px;flex:none;
+  border:1px solid hsl(var(--primary)/.4);border-radius:4px;cursor:pointer;
+  display:grid;place-items:center;transition:background .12s}
+[data-skin="shadcn"] .opt input[type=radio]{border-radius:999px}
+[data-skin="shadcn"] .opt input:checked{background:hsl(var(--primary));
+  border-color:hsl(var(--primary))}
+[data-skin="shadcn"] .opt input:checked::after{content:"";width:8px;height:8px;
+  background:hsl(var(--primary-foreground));
+  clip-path:polygon(14% 46%,0 60%,39% 100%,100% 22%,86% 8%,39% 71%)}
+[data-skin="shadcn"] .opt input[type=radio]:checked::after{width:6px;height:6px;
+  border-radius:999px;clip-path:none}
+[data-skin="shadcn"] .opt .cnt{color:hsl(var(--muted-foreground));font-size:13px}
+[data-skin="shadcn"] .range span{color:hsl(var(--muted-foreground))}
+[data-skin="shadcn"] .sortbar{background:hsl(var(--muted));
+  border-radius:var(--radius);font-size:14px}
+[data-skin="shadcn"] .sortbar .lbl{color:hsl(var(--muted-foreground))}
+[data-skin="shadcn"] .sortbar .count{color:hsl(var(--muted-foreground));
+  font-size:13px}
+[data-skin="shadcn"] .sortbar .btn{background:transparent}
+[data-skin="shadcn"] .sortbar .btn[aria-pressed=true]{
+  background:hsl(var(--background));box-shadow:0 1px 2px rgb(0 0 0/.06);
+  font-weight:600}
+[data-skin="shadcn"] .pcard{border:1px solid hsl(var(--border));
+  border-radius:calc(var(--radius) + 4px);background:hsl(var(--card));
+  overflow:hidden;box-shadow:0 1px 2px rgb(0 0 0/.05);
+  transition:box-shadow .18s,transform .18s}
+[data-skin="shadcn"] .pcard:hover{box-shadow:0 6px 20px rgb(0 0 0/.10);
+  transform:translateY(-2px)}
+[data-skin="shadcn"] .pcard .art{background:hsl(var(--muted));
+  color:hsl(var(--muted-foreground))}
+[data-skin="shadcn"] .pbody{padding:14px}
+[data-skin="shadcn"] .pname{font-size:14px;font-weight:500;line-height:1.35}
+[data-skin="shadcn"] .pprice{font-size:17px;font-weight:600;letter-spacing:-.02em}
+[data-skin="shadcn"] .pmeta{color:hsl(var(--muted-foreground));font-size:12px}
+[data-skin="shadcn"] .stars{color:#f0a000}
+[data-skin="shadcn"] .badge{display:inline-flex;align-items:center;
+  border:1px solid transparent;background:hsl(var(--muted));
+  border-radius:calc(var(--radius) - 2px);padding:2px 8px;font-size:12px;
+  font-weight:600}
+[data-skin="shadcn"] .chip{display:inline-flex;align-items:center;gap:5px;
+  border:1px solid hsl(var(--border));border-radius:999px;padding:3px 6px 3px 10px;
+  font-size:12.5px;font-weight:500}
+[data-skin="shadcn"] .chip button{all:unset;cursor:pointer;width:16px;height:16px;
+  border-radius:999px;display:grid;place-items:center;
+  color:hsl(var(--muted-foreground))}
+[data-skin="shadcn"] .chip button:hover{background:hsl(var(--accent));
+  color:hsl(var(--foreground))}
+[data-skin="shadcn"] .empty{color:hsl(var(--muted-foreground))}
+
+/* ── shadcn · product detail ─────────────────────────────────────────────── */
+[data-skin="shadcn"] .crumbs{font-size:13.5px;color:hsl(var(--muted-foreground))}
+[data-skin="shadcn"] .crumbs a{color:inherit}
+[data-skin="shadcn"] .crumbs a:hover{color:hsl(var(--foreground))}
+[data-skin="shadcn"] .crumbs .sep{opacity:.5}
+[data-skin="shadcn"] .crumbs .here{color:hsl(var(--foreground));font-weight:500}
+[data-skin="shadcn"] .gallery .hero-art{background:hsl(var(--muted));
+  color:hsl(var(--muted-foreground));border:1px solid hsl(var(--border));
+  border-radius:calc(var(--radius) + 4px)}
+[data-skin="shadcn"] .thumb{background:hsl(var(--muted));
+  color:hsl(var(--muted-foreground));border:1px solid hsl(var(--border));
+  border-radius:calc(var(--radius) - 2px);transition:border-color .15s}
+[data-skin="shadcn"] .thumb:hover{border-color:hsl(var(--ring)/.45)}
+[data-skin="shadcn"] .thumb[aria-current=true]{border-color:hsl(var(--primary));
+  box-shadow:0 0 0 1px hsl(var(--primary))}
+[data-skin="shadcn"] .dtitle{font-size:28px;font-weight:600;letter-spacing:-.022em}
+[data-skin="shadcn"] .drating{font-size:13.5px;color:hsl(var(--muted-foreground))}
+[data-skin="shadcn"] .drating .num{color:hsl(var(--foreground));font-weight:600}
+[data-skin="shadcn"] .drating .sep{opacity:.45}
+[data-skin="shadcn"] .dprice{font-size:36px;font-weight:700;letter-spacing:-.03em;
+  line-height:1}
+[data-skin="shadcn"] .dlede{font-size:15px;line-height:1.6;
+  color:hsl(var(--muted-foreground))}
+[data-skin="shadcn"] .specs{font-size:13.5px;padding-top:24px;
+  border-top:1px solid hsl(var(--border))}
+[data-skin="shadcn"] .specs dt{color:hsl(var(--muted-foreground))}
+[data-skin="shadcn"] .specs dd{font-weight:500}
+[data-skin="shadcn"] .btn-lg{height:46px;padding:0 26px;font-size:15px}
+[data-skin="shadcn"] .btn-square{width:46px;padding:0}
+[data-skin="shadcn"] .note{border:1px solid hsl(var(--border));
+  border-radius:var(--radius);padding:15px 17px;font-size:13.5px}
+[data-skin="shadcn"] .note strong{font-weight:600;font-size:14px}
+[data-skin="shadcn"] .note p{color:hsl(var(--muted-foreground));line-height:1.55}
+[data-skin="shadcn"] .dsections h2{font-size:18px;font-weight:600;
+  letter-spacing:-.015em}
+[data-skin="shadcn"] .dsections p{font-size:15px;line-height:1.7;
+  color:hsl(var(--muted-foreground));margin:0 0 14px}
+[data-skin="shadcn"] .receipt{border:1px solid hsl(var(--border));
+  border-radius:var(--radius);background:hsl(var(--muted));font-size:13px}
+[data-skin="shadcn"] .receipt .k{color:hsl(var(--muted-foreground))}
+[data-skin="shadcn"] .receipt .v{font-weight:500;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SKIN 2 — Broadsheet. The same commerce structure under the system's own
+   rules: serif everywhere, paper and ink, cyan only for interactive, and
+   NO boxes and NO dividers (rule 5) — separation is whitespace and scale.
+   ══════════════════════════════════════════════════════════════════════════ */
+[data-skin="broadsheet"]{
+  --color-bg:#f3f2f2; --color-text:#201e1d; --color-accent:#0088b0;
+  --color-accent-600:#1186ac; --color-accent-700:#006786;
+  --color-neutral-100:#f8f4f4; --color-neutral-200:#eae7e7;
+  --muted:color-mix(in srgb,#201e1d 58%,transparent);
+  background:var(--color-bg); color:var(--color-text);
+  font:400 15px/1.55 "Source Serif 4",Georgia,serif;
+}
+[data-skin="broadsheet"] .topbar{padding-top:26px}
+[data-skin="broadsheet"] .brand{font-size:20px;letter-spacing:.01em}
+[data-skin="broadsheet"] input[type=text],[data-skin="broadsheet"] input[type=number]{
+  height:38px;border:0;border-bottom:1px solid color-mix(in srgb,#201e1d 30%,transparent);
+  background:transparent;font:inherit;font-size:16px;color:inherit;
+  padding:0 2px;outline:none;border-radius:0}
+[data-skin="broadsheet"] input::placeholder{color:var(--muted)}
+[data-skin="broadsheet"] input:focus{border-bottom-color:var(--color-accent);
+  border-bottom-width:2px}
+[data-skin="broadsheet"] .btn{all:unset;box-sizing:border-box;cursor:pointer;
+  display:inline-flex;align-items:center;gap:6px;font-family:inherit;
+  font-size:15px;color:var(--color-accent);padding:0 2px}
+[data-skin="broadsheet"] .btn:hover{color:var(--color-accent-700)}
+[data-skin="broadsheet"] .btn-primary{color:var(--color-bg);
+  background:var(--color-accent);height:38px;padding:0 20px;border-radius:2px}
+[data-skin="broadsheet"] .btn-primary:hover{background:var(--color-accent-600)}
+[data-skin="broadsheet"] .searchfield input{height:44px;font-size:19px;
+  border-bottom-width:1px}
+[data-skin="broadsheet"] .searchfield .ic{left:2px;opacity:.42}
+[data-skin="broadsheet"] .searchfield input{padding-left:28px}
+[data-skin="broadsheet"] .iconbtn{width:44px;height:44px;background:none;
+  border:0;color:var(--color-text);border-bottom:1px solid
+  color-mix(in srgb,#201e1d 30%,transparent);border-radius:0}
+[data-skin="broadsheet"] .iconbtn:hover{color:var(--color-accent)}
+[data-skin="broadsheet"] .iconbtn[aria-expanded=true]{color:var(--color-accent);
+  border-bottom-color:var(--color-accent);border-bottom-width:2px}
+[data-skin="broadsheet"] .iconbtn .dot{background:var(--color-accent);
+  color:var(--color-bg);font-family:inherit;font-weight:600}
+[data-skin="broadsheet"] .topnav a{color:var(--muted);text-decoration:none;
+  font-size:15px}
+[data-skin="broadsheet"] .topnav a:hover{color:var(--color-accent)}
+[data-skin="broadsheet"] .filters h3{font-size:12px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--muted);font-weight:400}
+[data-skin="broadsheet"] .filters section{margin-bottom:38px}
+[data-skin="broadsheet"] .opt{font-size:16px}
+[data-skin="broadsheet"] .opt input{appearance:none;width:9px;height:9px;flex:none;
+  border-radius:999px;border:1px solid color-mix(in srgb,#201e1d 42%,transparent);
+  cursor:pointer;transition:background .12s}
+[data-skin="broadsheet"] .opt input:checked{background:var(--color-accent);
+  border-color:var(--color-accent)}
+[data-skin="broadsheet"] .opt .cnt{color:var(--muted);font-size:14px}
+[data-skin="broadsheet"] .range span{color:var(--muted)}
+[data-skin="broadsheet"] .sortbar{padding:0 0 4px;font-size:15px}
+[data-skin="broadsheet"] .sortbar .lbl{font-size:12px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--muted)}
+[data-skin="broadsheet"] .sortbar .count{color:var(--muted);font-size:14px}
+[data-skin="broadsheet"] .sortbar .btn[aria-pressed=true]{color:var(--color-text);
+  border-bottom:2px solid var(--color-text);padding-bottom:1px}
+[data-skin="broadsheet"] .grid{column-gap:34px;row-gap:52px}
+[data-skin="broadsheet"] .pcard .art{background:var(--color-neutral-200);
+  color:var(--color-text);aspect-ratio:4/5;position:relative;
+  filter:grayscale(.35) contrast(1.15);overflow:hidden}
+[data-skin="broadsheet"] .pcard .art::after{content:"";position:absolute;inset:0;
+  pointer-events:none;background-image:radial-gradient(circle,rgba(0,0,0,.2) 30%,
+  transparent 32%);background-size:3px 3px;mix-blend-mode:multiply}
+[data-skin="broadsheet"] .pbody{padding:16px 0 0}
+[data-skin="broadsheet"] .pname{font-size:20px;font-weight:600;line-height:1.15;
+  letter-spacing:-.015em}
+[data-skin="broadsheet"] .pprice{font-size:19px}
+[data-skin="broadsheet"] .pmeta{color:var(--muted);font-size:14px}
+[data-skin="broadsheet"] .stars{color:#8a5c00}
+[data-skin="broadsheet"] .badge{font-size:12px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--color-accent)}
+[data-skin="broadsheet"] .chip{display:inline-flex;align-items:center;gap:5px;
+  font-size:14px;color:var(--color-accent)}
+[data-skin="broadsheet"] .chip button{all:unset;cursor:pointer;opacity:.6}
+[data-skin="broadsheet"] .chip button:hover{opacity:1}
+[data-skin="broadsheet"] .empty{color:var(--muted);font-style:italic}
+/* detail — enough that B is not broken; A is the one being judged */
+[data-skin="broadsheet"] .crumbs{font-size:14px;color:var(--muted)}
+[data-skin="broadsheet"] .crumbs a{color:var(--color-accent)}
+[data-skin="broadsheet"] .crumbs .here{color:var(--color-text)}
+[data-skin="broadsheet"] .gallery .hero-art,[data-skin="broadsheet"] .thumb{
+  background:var(--color-neutral-200);color:var(--color-text)}
+[data-skin="broadsheet"] .dtitle{font-size:42px;font-weight:600;
+  letter-spacing:-.02em}
+[data-skin="broadsheet"] .drating{font-size:14px;color:var(--muted)}
+[data-skin="broadsheet"] .dprice{font-size:32px}
+[data-skin="broadsheet"] .dlede{font-size:17px;line-height:1.6}
+[data-skin="broadsheet"] .specs{font-size:15px}
+[data-skin="broadsheet"] .specs dt{color:var(--muted)}
+[data-skin="broadsheet"] .btn-lg{height:46px;padding:0 26px;font-size:16px}
+[data-skin="broadsheet"] .btn-square{width:46px;padding:0;
+  border:1px solid color-mix(in srgb,#201e1d 20%,transparent);border-radius:2px}
+[data-skin="broadsheet"] .note{font-size:15px}
+[data-skin="broadsheet"] .note p{color:var(--muted)}
+[data-skin="broadsheet"] .dsections h2{font-size:25px}
+[data-skin="broadsheet"] .dsections p{font-size:16px;line-height:1.7}
+[data-skin="broadsheet"] .receipt{padding:0}
+[data-skin="broadsheet"] .receipt .k{color:var(--muted)}
+[data-skin="broadsheet"] .receipt .v{font-family:ui-monospace,Menlo,monospace;
+  font-size:13px}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SKIN 3 — Hybrid. shadcn's structure, metrics and affordances; Broadsheet's
+   paper/ink palette and serif for the things that are *product* (names,
+   prices). Sans is kept for chrome only — controls, counts, filter labels.
+   ══════════════════════════════════════════════════════════════════════════ */
+[data-skin="hybrid"]{
+  --paper:#f3f2f2; --card:#faf9f9; --ink:#201e1d; --accent:#0088b0;
+  --border:color-mix(in srgb,#201e1d 14%,transparent);
+  --muted:color-mix(in srgb,#201e1d 55%,transparent);
+  --radius:.5rem;
+  background:var(--paper); color:var(--ink);
+  font:400 14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+[data-skin="hybrid"] .topbar{border-bottom:1px solid var(--border);
+  position:sticky;top:0;background:color-mix(in srgb,var(--paper) 88%,transparent);
+  backdrop-filter:blur(8px);z-index:40}
+[data-skin="hybrid"] .brand{font-family:"Source Serif 4",Georgia,serif;
+  font-size:19px;font-weight:600}
+[data-skin="hybrid"] input[type=text],[data-skin="hybrid"] input[type=number]{
+  height:36px;border:1px solid var(--border);border-radius:calc(var(--radius) - 2px);
+  padding:0 12px;font:inherit;font-size:14px;background:var(--card);color:inherit;
+  outline:none;transition:box-shadow .15s,border-color .15s}
+[data-skin="hybrid"] input::placeholder{color:var(--muted)}
+[data-skin="hybrid"] input:focus{border-color:var(--accent);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 16%,transparent)}
+[data-skin="hybrid"] .btn{all:unset;box-sizing:border-box;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;
+  padding:0 16px;border-radius:calc(var(--radius) - 2px);font-size:14px;
+  font-weight:500;white-space:nowrap;transition:background .15s}
+[data-skin="hybrid"] .btn-primary{background:var(--accent);color:var(--paper)}
+[data-skin="hybrid"] .btn-primary:hover{background:#006786}
+[data-skin="hybrid"] .btn-outline{border:1px solid var(--border)}
+[data-skin="hybrid"] .btn-outline:hover,[data-skin="hybrid"] .btn-ghost:hover{
+  background:color-mix(in srgb,var(--ink) 6%,transparent)}
+[data-skin="hybrid"] .btn-ghost{padding:0 12px}
+[data-skin="hybrid"] .btn-sm{height:32px;padding:0 12px;font-size:13px}
+[data-skin="hybrid"] .searchfield input{height:40px;font-size:14.5px;
+  padding-left:38px}
+[data-skin="hybrid"] .iconbtn{width:40px;height:40px;border:1px solid var(--border);
+  border-radius:calc(var(--radius) - 2px);background:var(--card);
+  transition:background .15s}
+[data-skin="hybrid"] .iconbtn:hover,[data-skin="hybrid"] .iconbtn[aria-expanded=true]{
+  background:color-mix(in srgb,var(--ink) 6%,transparent)}
+[data-skin="hybrid"] .iconbtn[aria-expanded=true]{color:var(--accent);
+  border-color:color-mix(in srgb,var(--accent) 40%,transparent)}
+[data-skin="hybrid"] .iconbtn .dot{background:var(--accent);color:var(--paper)}
+[data-skin="hybrid"] .topnav a{color:var(--muted);text-decoration:none;
+  font-size:14px;font-weight:500}
+[data-skin="hybrid"] .topnav a:hover{color:var(--accent)}
+[data-skin="hybrid"] .filters h3{font-size:11.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted);font-weight:600}
+[data-skin="hybrid"] .filters section{padding-bottom:22px;
+  border-bottom:1px solid var(--border)}
+[data-skin="hybrid"] .filters section:last-child{border-bottom:0}
+[data-skin="hybrid"] .opt input{appearance:none;width:16px;height:16px;flex:none;
+  border:1px solid color-mix(in srgb,var(--ink) 32%,transparent);border-radius:4px;
+  cursor:pointer;display:grid;place-items:center}
+[data-skin="hybrid"] .opt input[type=radio]{border-radius:999px}
+[data-skin="hybrid"] .opt input:checked{background:var(--accent);
+  border-color:var(--accent)}
+[data-skin="hybrid"] .opt input:checked::after{content:"";width:8px;height:8px;
+  background:var(--paper);
+  clip-path:polygon(14% 46%,0 60%,39% 100%,100% 22%,86% 8%,39% 71%)}
+[data-skin="hybrid"] .opt input[type=radio]:checked::after{width:6px;height:6px;
+  border-radius:999px;clip-path:none}
+[data-skin="hybrid"] .opt .cnt{color:var(--muted);font-size:13px}
+[data-skin="hybrid"] .range span{color:var(--muted)}
+[data-skin="hybrid"] .sortbar{background:color-mix(in srgb,var(--ink) 4%,transparent);
+  border-radius:var(--radius);font-size:14px}
+[data-skin="hybrid"] .sortbar .lbl,[data-skin="hybrid"] .sortbar .count{
+  color:var(--muted)}
+[data-skin="hybrid"] .sortbar .count{font-size:13px}
+[data-skin="hybrid"] .sortbar .btn{background:transparent}
+[data-skin="hybrid"] .sortbar .btn[aria-pressed=true]{background:var(--card);
+  box-shadow:0 1px 2px rgb(0 0 0/.07);font-weight:600;color:var(--accent)}
+[data-skin="hybrid"] .pcard{border:1px solid var(--border);
+  border-radius:calc(var(--radius) + 4px);background:var(--card);overflow:hidden;
+  transition:box-shadow .18s,transform .18s}
+[data-skin="hybrid"] .pcard:hover{box-shadow:0 6px 20px rgb(45 43 43/.14);
+  transform:translateY(-2px)}
+[data-skin="hybrid"] .pcard .art{background:#eae7e7;color:var(--ink);
+  position:relative;filter:grayscale(.35) contrast(1.15)}
+[data-skin="hybrid"] .pcard .art::after{content:"";position:absolute;inset:0;
+  pointer-events:none;background-image:radial-gradient(circle,rgba(0,0,0,.2) 30%,
+  transparent 32%);background-size:3px 3px;mix-blend-mode:multiply}
+[data-skin="hybrid"] .pbody{padding:14px}
+[data-skin="hybrid"] .pname{font-family:"Source Serif 4",Georgia,serif;
+  font-size:18px;font-weight:600;line-height:1.18;letter-spacing:-.015em}
+[data-skin="hybrid"] .pprice{font-family:"Source Serif 4",Georgia,serif;
+  font-size:19px;font-weight:600}
+[data-skin="hybrid"] .pmeta{color:var(--muted);font-size:12px}
+[data-skin="hybrid"] .stars{color:#8a5c00}
+[data-skin="hybrid"] .badge{display:inline-flex;align-items:center;
+  background:color-mix(in srgb,var(--accent) 12%,transparent);color:#006786;
+  border-radius:calc(var(--radius) - 2px);padding:2px 8px;font-size:12px;
+  font-weight:600}
+[data-skin="hybrid"] .chip{display:inline-flex;align-items:center;gap:5px;
+  border:1px solid var(--border);border-radius:999px;padding:3px 6px 3px 10px;
+  font-size:12.5px;font-weight:500;background:var(--card)}
+[data-skin="hybrid"] .chip button{all:unset;cursor:pointer;width:16px;height:16px;
+  border-radius:999px;display:grid;place-items:center;color:var(--muted)}
+[data-skin="hybrid"] .chip button:hover{background:color-mix(in srgb,var(--ink) 8%,
+  transparent);color:var(--ink)}
+[data-skin="hybrid"] .empty{color:var(--muted)}
+/* detail — enough that C is not broken; A is the one being judged */
+[data-skin="hybrid"] .crumbs{font-size:13.5px;color:var(--muted)}
+[data-skin="hybrid"] .crumbs a{color:inherit}
+[data-skin="hybrid"] .crumbs a:hover{color:var(--accent)}
+[data-skin="hybrid"] .crumbs .here{color:var(--ink);font-weight:500}
+[data-skin="hybrid"] .gallery .hero-art,[data-skin="hybrid"] .thumb{
+  background:#eae7e7;color:var(--ink);border:1px solid var(--border);
+  border-radius:calc(var(--radius) + 4px)}
+[data-skin="hybrid"] .thumb{border-radius:calc(var(--radius) - 2px)}
+[data-skin="hybrid"] .thumb[aria-current=true]{border-color:var(--accent);
+  box-shadow:0 0 0 1px var(--accent)}
+[data-skin="hybrid"] .dtitle{font-family:"Source Serif 4",Georgia,serif;
+  font-size:32px;font-weight:600;letter-spacing:-.02em}
+[data-skin="hybrid"] .drating{font-size:13.5px;color:var(--muted)}
+[data-skin="hybrid"] .drating .num{color:var(--ink);font-weight:600}
+[data-skin="hybrid"] .dprice{font-family:"Source Serif 4",Georgia,serif;
+  font-size:34px;font-weight:600;letter-spacing:-.02em;line-height:1}
+[data-skin="hybrid"] .dlede{font-size:15px;line-height:1.6;color:var(--muted)}
+[data-skin="hybrid"] .specs{font-size:13.5px;padding-top:24px;
+  border-top:1px solid var(--border)}
+[data-skin="hybrid"] .specs dt{color:var(--muted)}
+[data-skin="hybrid"] .specs dd{font-weight:500}
+[data-skin="hybrid"] .btn-lg{height:46px;padding:0 26px;font-size:15px}
+[data-skin="hybrid"] .btn-square{width:46px;padding:0}
+[data-skin="hybrid"] .note{border:1px solid var(--border);border-radius:var(--radius);
+  padding:15px 17px;font-size:13.5px;background:var(--card)}
+[data-skin="hybrid"] .note p{color:var(--muted);line-height:1.55}
+[data-skin="hybrid"] .dsections h2{font-family:"Source Serif 4",Georgia,serif;
+  font-size:21px;font-weight:600}
+[data-skin="hybrid"] .dsections p{font-size:15px;line-height:1.7;color:var(--muted);
+  margin:0 0 14px}
+[data-skin="hybrid"] .receipt{border:1px solid var(--border);
+  border-radius:var(--radius);background:var(--card);font-size:13px}
+[data-skin="hybrid"] .receipt .k{color:var(--muted)}
+[data-skin="hybrid"] .receipt .v{font-weight:500;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+</style>
+</head>
+
+<body data-skin="shadcn">
+<div id="stage"></div>
+
+<div class="proto-note">
+  <b>PROTOTYPE</b>
+  Same markup in all three — only [data-skin] changes.
+  Line art stands in for photography. category / rating / sold do not exist in
+  the backend's Product type.
+</div>
+
+<div class="proto-bar">
+  <button id="prev" aria-label="Previous">←</button>
+  <span class="lbl"><b id="vkey">A</b> — <span id="vname"></span></span>
+  <button id="next" aria-label="Next">→</button>
+</div>
+
+<script type="module">
+import { PRODUCTS, CATEGORIES, MERCHANT, price, sold, apply } from './products.js';
+
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+const SKINS = [
+  ['shadcn', 'shadcn/ui — as asked'],
+  ['broadsheet', 'Broadsheet commerce'],
+  ['hybrid', 'Hybrid — shadcn frame, Broadsheet ink'],
+];
+
+const SORTS = [
+  ['relevance', 'Relevance'], ['latest', 'Latest'], ['sales', 'Top sales'],
+  ['priceAsc', 'Price ↑'], ['priceDesc', 'Price ↓'],
+];
+
+const state = { q: '', cats: new Set(), min: null, max: null, minRating: 0,
+  sort: 'relevance', filtersOpen: true, productId: null, placed: null };
+
+const ICON_SEARCH = `<svg class="ic" viewBox="0 0 24 24" fill="none"
+  stroke="currentColor" stroke-width="2" stroke-linecap="round">
+  <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>`;
+
+/* Sliders, not a funnel — the panel it opens sets values, it does not narrow a
+   stream. Matches what the control actually does. */
+const ICON_FILTER = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+  stroke-width="2" stroke-linecap="round">
+  <path d="M4 6h16M4 12h16M4 18h16"/>
+  <circle cx="9" cy="6" r="2.2" fill="currentColor" stroke="none"/>
+  <circle cx="15" cy="12" r="2.2" fill="currentColor" stroke="none"/>
+  <circle cx="7" cy="18" r="2.2" fill="currentColor" stroke="none"/></svg>`;
+
+const star = (fill) => `<svg viewBox="0 0 24 24" fill="${fill ? 'currentColor' : 'none'}"
+  stroke="currentColor" stroke-width="2"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8
+  L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>`;
+
+const stars = (r) => `<span class="stars">${
+  [1, 2, 3, 4, 5].map((i) => star(i <= Math.round(r))).join('')}</span>`;
+
+function activeChips() {
+  const out = [];
+  for (const c of state.cats) out.push([`cat:${c}`, c]);
+  if (state.min !== null || state.max !== null)
+    out.push(['price', `₱${state.min ?? 0} – ₱${state.max ?? '∞'}`]);
+  if (state.minRating) out.push(['rating', `${state.minRating}★ & up`]);
+  if (state.q.trim()) out.push(['q', `“${state.q.trim()}”`]);
+  return out;
+}
+
+const ICON_SHIELD = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+  stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M12 2.5l7.5 3v6c0 4.6-3.1 8.6-7.5 10-4.4-1.4-7.5-5.4-7.5-10v-6z"/>
+  <path d="M9 12l2.2 2.2L15.5 10"/></svg>`;
+
+const ICON_HEART = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+  stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M20.3 5.6a5 5 0 00-7.1 0l-1.2 1.2-1.2-1.2a5 5 0 00-7.1 7.1l8.3 8.3
+  8.3-8.3a5 5 0 000-7.1z"/></svg>`;
+
+/* ══ product detail ════════════════════════════════════════════════════════
+   The buy box is deliberately short of a quantity stepper: POST /shop/checkout
+   accepts { productId } and nothing else, so a quantity control would be a
+   dead affordance. Same for a cart — there isn't one. */
+function renderDetail(p) {
+  const stub = state.placed;
+
+  document.getElementById('stage').innerHTML = `
+    <header class="topbar">
+      <div class="brand">${esc(MERCHANT)}</div>
+      <nav class="topnav"><a href="#">Orders</a><a href="#">Help</a></nav>
+    </header>
+
+    <div class="detail">
+      <nav class="crumbs">
+        <a data-back>Catalogue</a><span class="sep">/</span>
+        <a data-cat-crumb="${esc(p.category)}">${esc(p.category)}</a>
+        <span class="sep">/</span><span class="here">${esc(p.name)}</span>
+      </nav>
+
+      <div class="dgrid">
+        <div class="gallery">
+          <div class="hero-art">${p.art}</div>
+          <div class="thumbs">
+            ${[0, 1, 2, 3].map((i) => `<div class="thumb"
+              aria-current="${i === 0}">${p.art}</div>`).join('')}
+          </div>
+        </div>
+
+        <div class="buybox">
+          <span class="badge">${esc(p.category)}</span>
+          <h1 class="dtitle">${esc(p.name)}</h1>
+
+          <div class="drating">
+            ${stars(p.rating)}<span class="num">${p.rating}</span>
+            <span class="sep">·</span><span>${sold(p.sold)} sold</span>
+          </div>
+
+          <div class="dprice">${price(p)}</div>
+          <p class="dlede">${esc(p.description)}</p>
+
+          <dl class="specs">
+            <dt>Item ID</dt><dd>${esc(p.id)}</dd>
+            <dt>Category</dt><dd>${esc(p.category)}</dd>
+            <dt>Ships from</dt><dd>Makati City</dd>
+            <dt>Courier</dt><dd>Assigned at checkout</dd>
+          </dl>
+
+          <div class="dactions">
+            <button class="btn btn-primary btn-lg btn-buy" id="buy">Buy now</button>
+            <button class="btn btn-outline btn-lg btn-square"
+              aria-label="Save">${ICON_HEART}</button>
+          </div>
+
+          <div class="note">
+            ${ICON_SHIELD}
+            <div>
+              <strong>Ships with custody tracking</strong>
+              <p>Every handover is signed by the courier holding it, and the
+                record is public. You get a delivery code only you can release.</p>
+            </div>
+          </div>
+
+          ${stub ? `<div class="receipt">
+            <div class="row"><span class="k">Order</span>
+              <span class="v">#${stub.orderId}</span></div>
+            <div class="row"><span class="k">Access token</span>
+              <span class="v">${stub.accessToken}</span></div>
+            <div class="row"><span class="k">Parcel</span>
+              <span class="v">minting…</span></div>
+          </div>` : ''}
+        </div>
+      </div>
+
+      <div class="dsections">
+        <section>
+          <h2>Description</h2>
+          <p>${esc(p.description)}</p>
+          <p>Packed flat and dispatched the same working day. Custody passes to
+            the first courier at the depot, and every handover after that is a
+            separate signature — nobody can move this parcel alone.</p>
+        </section>
+        <section>
+          <h2>Delivery</h2>
+          <p>Metro Manila, 1–2 working days. Provincial, 3–5.</p>
+          <p>At the door the courier needs a delivery code that only you can
+            reveal. Until you release it, the parcel cannot be closed.</p>
+        </section>
+      </div>
+    </div>`;
+
+  wireDetail(p);
+}
+
+function wireDetail(p) {
+  for (const el of document.querySelectorAll('[data-back]'))
+    el.onclick = () => { state.productId = null; state.placed = null; render(); };
+
+  document.querySelector('[data-cat-crumb]').onclick = (e) => {
+    state.productId = null; state.placed = null;
+    state.cats.clear(); state.cats.add(e.currentTarget.dataset.catCrumb);
+    render();
+  };
+
+  for (const [i, el] of [...document.querySelectorAll('.thumb')].entries())
+    el.onclick = () => {
+      for (const t of document.querySelectorAll('.thumb'))
+        t.setAttribute('aria-current', 'false');
+      el.setAttribute('aria-current', 'true');
+      void i;
+    };
+
+  // Stubbed — the question is what this screen looks like, not whether
+  // POST /shop/checkout works.
+  document.getElementById('buy').onclick = () => {
+    state.placed = {
+      orderId: String(4000 + Math.floor(Math.random() * 900)),
+      accessToken: [...crypto.getRandomValues(new Uint8Array(8))]
+        .map((b) => b.toString(16).padStart(2, '0')).join(''),
+    };
+    render();
+  };
+}
+
+/** Keeps ?product= in step with state so a reload lands on the same screen. */
+function syncUrl() {
+  const u = new URL(location.href);
+  state.productId ? u.searchParams.set('product', state.productId)
+                  : u.searchParams.delete('product');
+  history.replaceState(null, '', u);
+}
+
+function render() {
+  syncUrl();
+  const detail = PRODUCTS.find((p) => p.id === state.productId);
+  if (detail) return renderDetail(detail);
+
+  const results = apply(state);
+  const chips = activeChips();
+
+  document.getElementById('stage').innerHTML = `
+    <header class="topbar">
+      <div class="brand">${esc(MERCHANT)}</div>
+      <nav class="topnav"><a href="#">Orders</a><a href="#">Help</a></nav>
+    </header>
+
+    <div class="searchrow">
+      <div class="searchfield">
+        ${ICON_SEARCH}
+        <input type="text" id="q" placeholder="Search products"
+          value="${esc(state.q)}" autocomplete="off">
+      </div>
+      <button class="iconbtn" id="togglefilters" aria-label="Filters"
+        aria-expanded="${state.filtersOpen}">
+        ${ICON_FILTER}
+        ${chips.length ? `<span class="dot">${chips.length}</span>` : ''}
+      </button>
+    </div>
+
+    <div class="shell${state.filtersOpen ? '' : ' nofilters'}">
+      <aside class="filters">
+        <section>
+          <h3>Category</h3>
+          ${CATEGORIES.map((c) => `
+            <label class="opt">
+              <input type="checkbox" data-cat="${esc(c)}"
+                ${state.cats.has(c) ? 'checked' : ''}>
+              <span>${esc(c)}</span>
+              <span class="cnt">${PRODUCTS.filter((p) => p.category === c).length}</span>
+            </label>`).join('')}
+        </section>
+
+        <section>
+          <h3>Price range</h3>
+          <div class="range">
+            <input type="number" id="min" placeholder="₱ Min" value="${state.min ?? ''}">
+            <span>–</span>
+            <input type="number" id="max" placeholder="₱ Max" value="${state.max ?? ''}">
+          </div>
+        </section>
+
+        <section>
+          <h3>Rating</h3>
+          ${[[0, 'Any rating'], [4, '4★ & up'], [4.5, '4.5★ & up']].map(([v, l]) => `
+            <label class="opt">
+              <input type="radio" name="rating" data-rating="${v}"
+                ${state.minRating === v ? 'checked' : ''}>
+              <span>${l}</span>
+            </label>`).join('')}
+        </section>
+
+        <section>
+          <button class="btn btn-outline btn-sm" id="clear">Clear all</button>
+        </section>
+      </aside>
+
+      <main>
+        <div class="sortbar">
+          <span class="lbl">Sort by</span>
+          ${SORTS.map(([k, l]) => `<button class="btn btn-ghost btn-sm" data-sort="${k}"
+            aria-pressed="${state.sort === k}">${l}</button>`).join('')}
+          <span class="spacer"></span>
+          <span class="count">${results.length} of ${PRODUCTS.length}</span>
+        </div>
+
+        ${chips.length ? `<div class="chips" style="margin:-8px 0 20px">
+          ${chips.map(([k, l]) => `<span class="chip">${esc(l)}
+            <button data-chip="${esc(k)}" aria-label="Remove">×</button></span>`).join('')}
+        </div>` : ''}
+
+        ${results.length ? `<div class="grid">
+          ${results.map((p) => `
+            <article class="pcard" data-open="${esc(p.id)}">
+              <div class="art">${p.art}</div>
+              <div class="pbody">
+                <h2 class="pname">${esc(p.name)}</h2>
+                <div class="pprice">${price(p)}</div>
+                <div class="pmeta">${stars(p.rating)}
+                  <span>${p.rating}</span><span>·</span>
+                  <span>${sold(p.sold)} sold</span></div>
+              </div>
+            </article>`).join('')}
+        </div>` : `<div class="empty">No products match those filters.</div>`}
+      </main>
+    </div>`;
+
+  wire();
+}
+
+function wire() {
+  const q = document.getElementById('q');
+  q.oninput = (e) => { state.q = e.target.value; repaintKeepingFocus(); };
+
+  document.getElementById('togglefilters').onclick = () => {
+    state.filtersOpen = !state.filtersOpen;
+    render();
+  };
+
+  for (const el of document.querySelectorAll('[data-open]'))
+    el.onclick = () => {
+      state.productId = el.dataset.open;
+      state.placed = null;
+      scrollTo(0, 0);
+      render();
+    };
+
+  for (const el of document.querySelectorAll('[data-cat]'))
+    el.onchange = (e) => {
+      e.target.checked ? state.cats.add(e.target.dataset.cat)
+                       : state.cats.delete(e.target.dataset.cat);
+      render();
+    };
+  for (const el of document.querySelectorAll('[data-rating]'))
+    el.onchange = (e) => { state.minRating = Number(e.target.dataset.rating); render(); };
+  for (const el of document.querySelectorAll('[data-sort]'))
+    el.onclick = (e) => { state.sort = e.currentTarget.dataset.sort; render(); };
+  for (const el of document.querySelectorAll('[data-chip]'))
+    el.onclick = (e) => {
+      const k = e.currentTarget.dataset.chip;
+      if (k.startsWith('cat:')) state.cats.delete(k.slice(4));
+      else if (k === 'price') { state.min = null; state.max = null; }
+      else if (k === 'rating') state.minRating = 0;
+      else if (k === 'q') state.q = '';
+      render();
+    };
+
+  const num = (id, key) => {
+    const el = document.getElementById(id);
+    el.onchange = () => { state[key] = el.value === '' ? null : Number(el.value); render(); };
+  };
+  num('min', 'min'); num('max', 'max');
+
+  document.getElementById('clear').onclick = () => {
+    Object.assign(state, { q: '', min: null, max: null, minRating: 0, sort: 'relevance' });
+    state.cats.clear();
+    render();
+  };
+}
+
+/** A full re-render blows away focus, which makes the search box unusable. */
+function repaintKeepingFocus() {
+  const pos = document.getElementById('q').selectionStart;
+  render();
+  const q = document.getElementById('q');
+  q.focus();
+  q.setSelectionRange(pos, pos);
+}
+
+/* ── skin switcher ──────────────────────────────────────────────────────── */
+function currentIndex() {
+  const k = (new URLSearchParams(location.search).get('variant') || 'A').toUpperCase();
+  const i = k.charCodeAt(0) - 65;
+  return i >= 0 && i < SKINS.length ? i : 0;
+}
+
+function paint() {
+  const i = currentIndex();
+  state.productId = new URLSearchParams(location.search).get('product');
+  document.body.dataset.skin = SKINS[i][0];
+  document.getElementById('vkey').textContent = String.fromCharCode(65 + i);
+  document.getElementById('vname').textContent = SKINS[i][1];
+  render();
+}
+
+function go(step) {
+  const i = (currentIndex() + step + SKINS.length) % SKINS.length;
+  const u = new URL(location.href);
+  u.searchParams.set('variant', String.fromCharCode(65 + i));
+  history.replaceState(null, '', u);
+  paint();
+}
+
+document.getElementById('prev').onclick = () => go(-1);
+document.getElementById('next').onclick = () => go(1);
+addEventListener('keydown', (e) => {
+  if (/^(INPUT|TEXTAREA)$/.test(e.target.tagName) || e.target.isContentEditable) return;
+  if (e.key === 'ArrowLeft') go(-1);
+  if (e.key === 'ArrowRight') go(1);
+});
+
+paint();
+</script>
+</body>
+</html>
