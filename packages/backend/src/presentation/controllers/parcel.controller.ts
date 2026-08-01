@@ -1,5 +1,9 @@
-import { hexToBin } from '@bitauth/libauth';
-import { AcceptHandoffUseCase, ConfirmDeliveryUseCase, ConfirmReturnUseCase, CreateParcelUseCase, HandoffUseCase, RejectDeliveryUseCase, RequestDeliveryUseCase, ReturnToSenderUseCase } from '../../application/use-cases/index.js';
+import { binToHex, hexToBin } from '@bitauth/libauth';
+import { AcceptHandoffUseCase, ConfirmDeliveryUseCase, CreateParcelUseCase, GetParcelUseCase, HandoffUseCase, RequestDeliveryUseCase } from '../../application/use-cases/index.js';
+import type { ParcelHistoryEntry } from '../../application/ports/parcel-contract.js';
+import { createDeliverySecret } from '../../infrastructure/delivery-secret-service.js';
+import { getCourier, MERCHANT, RECIPIENT } from '../../infrastructure/fixtures.js';
+import { signRegistryAttestation } from '../../infrastructure/libauth/registry-attestation.js';
 
 export interface ParcelControllerDeps {
   createParcel: CreateParcelUseCase;
@@ -7,76 +11,65 @@ export interface ParcelControllerDeps {
   acceptHandoff: AcceptHandoffUseCase;
   requestDelivery: RequestDeliveryUseCase;
   confirmDelivery: ConfirmDeliveryUseCase;
-  reject: RejectDeliveryUseCase;
-  returnToSender: ReturnToSenderUseCase;
-  confirmReturn: ConfirmReturnUseCase;
+  getParcel: GetParcelUseCase;
 }
 
 export class ParcelController {
   constructor(private readonly deps: ParcelControllerDeps) {}
 
-  create(body: { merchantPk: string; recipientPkh: string; courierPkh: string }): Promise<{ contractId: string; address: string; txid: string }> {
-    return this.deps.createParcel.execute({
-      merchantPk: hexToBin(body.merchantPk),
-      recipientPkh: hexToBin(body.recipientPkh),
-      courierPkh: hexToBin(body.courierPkh),
+  async create(body: { courierId: string; recipientPkh?: string }): Promise<{ contractId: string; address: string; txid: string; deliverySecret: string }> {
+    const courier = getCourier(body.courierId);
+    const { hash, secret } = createDeliverySecret();
+    const result = await this.deps.createParcel.execute({
+      merchantPk: MERCHANT.privateKey,
+      recipientPkh: body.recipientPkh ? hexToBin(body.recipientPkh) : RECIPIENT.publicKeyHash,
+      courierPkh: courier.publicKeyHash,
+      deliveryCodeHash: hash,
     });
+    return { ...result, deliverySecret: binToHex(secret) };
   }
 
-  handoff(contractId: string, body: { courierSig: string; courierPk: string; nextCustodian: string }): Promise<string> {
+  handoff(contractId: string, body: { courierId: string; nextCourierId: string }): Promise<string> {
+    const courier = getCourier(body.courierId);
+    const nextCourier = getCourier(body.nextCourierId);
     return this.deps.handoff.execute({
       contractId,
-      courierSig: hexToBin(body.courierSig),
-      courierPk: hexToBin(body.courierPk),
-      nextCustodian: hexToBin(body.nextCustodian),
+      courierSig: courier.privateKey,
+      courierPk: courier.publicKey,
+      nextCustodian: nextCourier.publicKeyHash,
+      registryAttestation: signRegistryAttestation(nextCourier.publicKeyHash),
     });
   }
 
-  acceptHandoff(contractId: string, body: { courierSig: string; courierPk: string }): Promise<string> {
+  acceptHandoff(contractId: string, body: { courierId: string }): Promise<string> {
+    const courier = getCourier(body.courierId);
     return this.deps.acceptHandoff.execute({
       contractId,
-      courierSig: hexToBin(body.courierSig),
-      courierPk: hexToBin(body.courierPk),
+      courierSig: courier.privateKey,
+      courierPk: courier.publicKey,
     });
   }
 
-  requestDelivery(contractId: string, body: { courierSig: string; courierPk: string }): Promise<string> {
+  requestDelivery(contractId: string, body: { courierId: string }): Promise<string> {
+    const courier = getCourier(body.courierId);
     return this.deps.requestDelivery.execute({
       contractId,
-      courierSig: hexToBin(body.courierSig),
-      courierPk: hexToBin(body.courierPk),
+      courierSig: courier.privateKey,
+      courierPk: courier.publicKey,
     });
   }
 
-  confirmDelivery(contractId: string, body: { recipientSig: string; recipientPk: string }): Promise<string> {
+  confirmDelivery(contractId: string, body: { courierId: string; deliveryCode: string }): Promise<string> {
+    const courier = getCourier(body.courierId);
     return this.deps.confirmDelivery.execute({
       contractId,
-      recipientSig: hexToBin(body.recipientSig),
-      recipientPk: hexToBin(body.recipientPk),
+      recipientSig: RECIPIENT.privateKey,
+      recipientPk: RECIPIENT.publicKey,
+      deliveryCode: hexToBin(body.deliveryCode),
     });
   }
 
-  reject(contractId: string, body: { recipientSig: string; recipientPk: string }): Promise<string> {
-    return this.deps.reject.execute({
-      contractId,
-      recipientSig: hexToBin(body.recipientSig),
-      recipientPk: hexToBin(body.recipientPk),
-    });
-  }
-
-  returnToSender(contractId: string, body: { courierSig: string; courierPk: string }): Promise<string> {
-    return this.deps.returnToSender.execute({
-      contractId,
-      courierSig: hexToBin(body.courierSig),
-      courierPk: hexToBin(body.courierPk),
-    });
-  }
-
-  confirmReturn(contractId: string, body: { merchantSig: string; merchantPk: string }): Promise<string> {
-    return this.deps.confirmReturn.execute({
-      contractId,
-      merchantSig: hexToBin(body.merchantSig),
-      merchantPk: hexToBin(body.merchantPk),
-    });
+  getParcel(contractId: string): Promise<Array<ParcelHistoryEntry>> {
+    return this.deps.getParcel.execute(contractId);
   }
 }
