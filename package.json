@@ -8,8 +8,8 @@
   ],
   "scripts": {
     "compile": "bun run scripts/compile.ts",
-    "dev": "bun run --filter '@parcel-tracker/backend' dev",
-    "dev:frontend": "bun run --filter '@parcel-tracker/frontend' dev",
+    "dev": "bun run --filter '@parcel-tracker/shared' build && bun run --filter '@parcel-tracker/backend' dev",
+    "dev:frontend": "bun run --filter '@parcel-tracker/shared' build && bun run --filter '@parcel-tracker/frontend' dev",
     "build": "bun run --filter '*' build"
   },
   "devDependencies": {
