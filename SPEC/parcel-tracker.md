@@ -1,403 +1,285 @@
 # ParcelTracker — BCH Delivery Tracking Smart Contract
 
-> Hackathon demo: on-chain custody tracking for e-commerce parcels using CashScript state machines and CashToken NFTs. Covers successful delivery, recipient rejection, and courier-initiated returns.
+> Hackathon build scope: four contract functions, one parcel, chipnet.
+> Full design with rationale and attack analysis: `files/parcel-tracker-v2.md`.
+> Build brief with checkpoints and demo script: `files/BUILD-TONIGHT.md`.
 
 ---
 
 ## 1. Overview
 
-A shared, tamper-resistant tracking system for individual e-commerce parcels. Each parcel gets one unique CashToken NFT locked by a CashScript covenant. The contract enforces a linear state machine where each custody handoff is an on-chain transaction. Only the final recipient can confirm or reject delivery. Couriers can initiate a return if the recipient is unresponsive — but only the merchant can close the return.
+A CashScript/CashTokens utility layer that existing marketplaces and logistics providers
+integrate **without asking any end user to own a wallet**. Every custody handoff is signed
+on-chain by the courier accepting the parcel. Delivery requires both the marketplace's
+signature **and** a secret only the recipient holds — so no single party can fake a delivery.
+
+Each parcel gets one unique CashToken NFT locked by a CashScript covenant. The covenant
+enforces a linear state machine; terminal states exit the covenant entirely to a plain
+P2PKH address, so finality is enforced by construction.
 
 ### Hackathon scope
 
-- Demonstrate **one individual parcel** through the full lifecycle
-- Merchant → Courier A → Courier B → Recipient
-- Three possible endings: Delivered, Rejected, Returned
-- Chipnet (BCH testnet)
+- Four functions: `handoff`, `acceptHandoff`, `requestDelivery`, `confirmDelivery`
+- Server-side delivery-secret generation (Path B: generate → hash → delete plaintext)
+- Three screens: create order, courier scan/handoff, public tracking page
+- Deployed and spending on chipnet
+
+### Deferred (roadmap)
+
+`reject` · `returnToSender` · `confirmReturn` · client-side secret generation (Path A) ·
+courier enrolment funnel · key revocation · auth layer · timeouts · multi-tenancy ·
+mainnet. All designed in `files/parcel-tracker-v2.md`; none built tonight.
 
 ---
 
 ## 2. Actors
 
-| Actor | Role | Needs |
-|---|---|---|
-| **Merchant / Seller** | Creates parcel, mints tracking NFT, assigns first courier, pre-funds gas, confirms returns | BCH (chipnet) + keypair |
-| **Courier A** | First custodian, hands off to Courier B | Keypair only |
-| **Courier B** | Second custodian, hands off to Recipient; can initiate return | Keypair only |
-| **Recipient** | Final customer, confirms or rejects delivery | Keypair only |
+| Actor | Has a key? | Held by | Needs BCH? |
+|---|---|---|---|
+| **Marketplace / Merchant** | Yes | Own backend — master seed, one key per delivery | **Yes** — pre-funds every parcel |
+| **Recipient** | Yes — custodial | Marketplace, derived per delivery | No |
+| **Courier (employee)** | Yes | Provisioned to device at onboarding (demo: fixture) | No |
+| **Courier Registry** | Yes | Consortium key (demo: single fixture key) | No |
+
+For the demo, all keys are fixtures seeded at startup. Nobody installs a wallet.
 
 ---
 
-## 3. State Machine
-
-```
-                           ┌──────────────────────────────────────────┐
-                           │              DELIVERED (3)               │
-                           │              ★ TERMINAL ★                │
-                           └──────────────────────────────────────────┘
-                                                ▲
-                                                │ confirmDelivery()
-                                                │ (recipient signs)
-                           ┌────────────────────┴─────────────────────┐
-  ┌──────────┐  handoff()  │              DELIVERYPENDING (2)          │
-  │INCUSTODY │────────────►│              pending = recipient          │
-  │  (0)     │             └──┬────────────────────┬──────────────────┘
-  │ holds=A  │                │                    │
-  └────▲─────┘                │ reject()           │ returnToSender()
-       │                      │ (recipient signs)  │ (courier signs)
-       │ acceptHandoff()      ▼                    ▼
-       │ (B signs)    ┌──────────────┐    ┌──────────────────┐
-  ┌────┴──────────┐   │  REJECTED (4)│    │ RETURN_PENDING (5)│
-  │HANDOFFPENDING │   │  ★ TERMINAL ★│    │ pending = merchant │
-  │     (1)       │   └──────────────┘    └────────┬─────────┘
-  │ pending = B   │                                │
-  └───────────────┘                                │ confirmReturn()
-                                                   │ (merchant signs)
-                                                   ▼
-                                          ┌──────────────────┐
-                                          │  RETURNED (6)    │
-                                          │  ★ TERMINAL ★    │
-                                          └──────────────────┘
-```
-
-Seven states:
-
-| State | Value | Meaning | Can be spent by |
-|---|---|---|---|
-| InCustody | 0 | Parcel held by custodian in commitment | Commitment's `custodian` field |
-| HandoffPending | 1 | Courier proposed handoff to next courier | Commitment's `custodian` field (the NEXT courier) |
-| DeliveryPending | 2 | Courier proposed delivery to recipient | **Recipient** (via `confirmDelivery` or `reject`) **or Courier** (via `returnToSender`) |
-| Delivered | 3 | Terminal — recipient accepted | Nobody |
-| Rejected | 4 | Terminal — recipient refused | Nobody |
-| ReturnPending | 5 | Courier initiated return, awaiting merchant | **Merchant** (constructor `merchantPkh`) |
-| Returned | 6 | Terminal — merchant confirmed return | Nobody |
-
-### Transitions
-
-| # | From | To | Function | Signs | Key check |
-|---|---|---|---|---|---|
-| 1 | InCustody (A) | HandoffPending (B) | `handoff` | Courier A | `hash160(pk) == commitment.custodian` |
-| 2 | HandoffPending (B) | InCustody (B) | `acceptHandoff` | Courier B | `hash160(pk) == commitment.custodian` |
-| 3 | InCustody (B) | DeliveryPending | `requestDelivery` | Courier B | `hash160(pk) == commitment.custodian` |
-| 4 | DeliveryPending | Delivered | `confirmDelivery` | **Recipient** | `hash160(pk) == this.recipientPkh` |
-| 5 | DeliveryPending | Rejected | `reject` | **Recipient** | `hash160(pk) == this.recipientPkh` |
-| 6 | DeliveryPending | ReturnPending | `returnToSender` | **Courier** | `hash160(pk) == commitment.custodian` |
-| 7 | ReturnPending | Returned | `confirmReturn` | **Merchant** | `hash160(pk) == this.merchantPkh` |
-
-### Key design property: three exits from DeliveryPending
-
-Only one state has branching: `DeliveryPending`. From here, three actors can act — but each has **exactly one path**:
-
-| Actor | Can call | Goes to | Constraint |
-|---|---|---|---|
-| Recipient | `confirmDelivery()` | Delivered | Must match `this.recipientPkh` |
-| Recipient | `reject()` | Rejected | Must match `this.recipientPkh` |
-| Courier | `returnToSender()` | ReturnPending | Must match commitment's `custodian` |
-| Merchant | — | — | Cannot act directly on DeliveryPending; only on ReturnPending |
-
-The recipient has two choices (accept/reject). The courier has one (initiate return). The merchant has one (confirm return) — but only after the courier has already initiated it. No actor can unilaterally close the loop.
-
----
-
-## 4. Contract Design
+## 3. Contract
 
 ### Constructor
 
 ```cashscript
-contract ParcelTracker(bytes20 recipientPkh, bytes20 merchantPkh) {
-    // recipientPkh — IMMUTABLE. Only this address can confirm/reject delivery.
-    // merchantPkh — IMMUTABLE. Only this address can confirm a return.
-}
+contract ParcelTracker(
+    bytes20 recipientPkh,      // custodial, derived per-delivery by the marketplace
+    bytes20 merchantPkh,       // marketplace settlement / return destination
+    bytes32 deliveryCodeHash,  // sha256(deliverySecret) — plaintext held ONLY by recipient
+    pubkey  registryPk         // courier consortium attestation key
+)
 ```
 
-One contract deployment per parcel. Both recipient and merchant are fixed at creation — neither can be changed mid-lifecycle.
+One deployment per parcel. All four values are immutable, baked into the locking bytecode.
 
-### Functions
+### Mint
+
+A `mint` function is included in the contract for hackathon simplicity — one contract does
+everything, deploy is a single transaction. The v2 spec describes minting as a plain wallet
+send (no covenant function); that is the production design. The `mint` function is a
+demo-scope convenience, not a spec violation.
 
 ```cashscript
-function handoff(sig courierSig, pubkey courierPk, bytes20 nextCustodian) {
-    require(this.state == STATE_INCUSTODY);                     // must be in InCustody
-    require(hash160(courierPk) == this.commitment.custodian);   // must be current holder
-    require(checkSig(courierSig, courierPk));
-    // Enforce output: state=HandoffPending, custodian=nextCustodian
-}
-
-function acceptHandoff(sig courierSig, pubkey courierPk) {
-    require(this.state == STATE_HANDOFF_PENDING);               // must be awaiting handoff
-    require(hash160(courierPk) == this.commitment.custodian);   // must be the intended courier
-    require(checkSig(courierSig, courierPk));
-    // Enforce output: state=InCustody, custodian=same pk (the accepter)
-}
-
-function requestDelivery(sig courierSig, pubkey courierPk) {
-    require(this.state == STATE_INCUSTODY);                     // must be holding parcel
-    require(hash160(courierPk) == this.commitment.custodian);   // must be current holder
-    require(checkSig(courierSig, courierPk));
-    // Enforce output: state=DeliveryPending, custodian=this.recipientPkh
-    // NOTE: recipientPkh read from CONSTRUCTOR — courier cannot redirect delivery
-}
-
-function confirmDelivery(sig recipientSig, pubkey recipientPk) {
-    require(this.state == STATE_DELIVERY_PENDING);              // must be pending delivery
-    require(hash160(recipientPk) == this.recipientPkh);         // ★ MUST BE RECIPIENT ★
-    require(checkSig(recipientSig, recipientPk));
-    // Enforce output: state=Delivered, custodian=0x00...00
-}
-
-function reject(sig recipientSig, pubkey recipientPk) {
-    require(this.state == STATE_DELIVERY_PENDING);              // must be pending delivery
-    require(hash160(recipientPk) == this.recipientPkh);         // ★ MUST BE RECIPIENT ★
-    require(checkSig(recipientSig, recipientPk));
-    // Enforce output: state=Rejected, custodian=0x00...00
-}
-
-function returnToSender(sig courierSig, pubkey courierPk) {
-    require(this.state == STATE_DELIVERY_PENDING);              // must be pending delivery
-    require(hash160(courierPk) == this.commitment.custodian);   // must be the courier
-    require(checkSig(courierSig, courierPk));
-    // Enforce output: state=ReturnPending, custodian=this.merchantPkh
-    // NOTE: merchantPkh read from CONSTRUCTOR — courier cannot redirect return
-}
-
-function confirmReturn(sig merchantSig, pubkey merchantPk) {
-    require(this.state == STATE_RETURN_PENDING);                 // must be pending return
-    require(hash160(merchantPk) == this.merchantPkh);            // ★ MUST BE MERCHANT ★
-    require(checkSig(merchantSig, merchantPk));
-    // Enforce output: state=Returned, custodian=0x00...00
+function mint(sig merchantSig, pubkey merchantPk, bytes20 initialCustodian) {
+    // Merchant signs; creates the parcel NFT with commitment 0x00 + initialCustodian + 0x00
+    // NFT goes to the contract address; merchant pre-funds with 25,000 sats
 }
 ```
 
-### Terminal states
+### State machine
 
-All functions begin with a state check. Terminal states (3, 4, 6) are never valid inputs, so the UTXO is permanently locked:
+Four covenant states. Terminal states exit the covenant to a plain P2PKH address.
 
-```cashscript
-// No function accepts state >= 3 as input
-// Delivered=3, Rejected=4, Returned=6 are dead ends
+```
+                    handoff()              acceptHandoff()
+  ┌──────────────┐  courier A sig     ┌──────────────────┐  courier B sig
+  │ InCustody(0) │─────────────────►  │ HandoffPending(1)│──────────────┐
+  │ custodian=A  │  + registry attest │ custodian=B      │              │
+  └──────┬───────┘                    └──────────────────┘              │
+         │  ▲                                                          │
+         │  └──────────────────────────────────────────────────────────┘
+         │                                              (loops: N hops)
+         │ requestDelivery()  courier sig
+         ▼
+  ┌────────────────────────┐
+  │ DeliveryPending(2)     │   custodian STAYS = the courier holding the parcel
+  └───────────┬────────────┘
+              │ confirmDelivery()  recipient sig + DELIVERY CODE
+              ▼
+  NFT → recipient P2PKH
+  commitment[0] = 0x04 (Delivered)
+  ★ immutable receipt, out of covenant ★
 ```
 
-### Covenant enforcement
+### Transition table (tonight)
 
-Every function enforces that the NFT output goes back to the **same contract** (same locking bytecode). This is the "single lock" pattern — one contract address, many states encoded in the NFT commitment.
+| # | From | To | Function | Signer | Second factor |
+|---|---|---|---|---|---|
+| 1 | InCustody | HandoffPending | `handoff` | Current courier | Registry attestation of next courier |
+| 2 | HandoffPending | InCustody | `acceptHandoff` | Incoming courier | — |
+| 3 | InCustody | DeliveryPending | `requestDelivery` | Current courier | — |
+| 4 | DeliveryPending | **Delivered** (exits) | `confirmDelivery` | Recipient (custodial) | **Delivery code preimage** |
+
+### Key design properties
+
+- **`requestDelivery` preserves `custodian`.** The courier still physically holds the parcel.
+  v1 overwrote it with `recipientPkh`, which broke `returnToSender`. Fixed.
+- **`confirmDelivery` is 2-of-2.** Marketplace signature AND a secret only the recipient holds.
+  A courier cannot self-confirm under any circumstance.
+- **Terminal by construction.** `confirmDelivery` moves the NFT to a plain P2PKH address.
+  There is no covenant state to re-enter; the receipt is immutable.
+
+### Deferred transitions
+
+| # | From | To | Function | Signer | Second factor |
+|---|---|---|---|---|---|
+| 5 | DeliveryPending | ReturnPending | `reject` | Recipient | Delivery code preimage |
+| 6 | DeliveryPending | ReturnPending | `returnToSender` | Current courier | — |
+| 7 | ReturnPending | **Returned** (exits) | `confirmReturn` | Merchant | — |
+
+Designed in `files/parcel-tracker-v2.md` §4. Not built tonight.
 
 ---
 
-## 5. NFT Commitment Encoding (40 bytes)
-
-Both recipient and merchant live in constructor params (immutable). The commitment only needs state + current custodian:
+## 4. Commitment encoding — 22 bytes
 
 ```
-Byte 0:     state       uint8    (0-6, see state table above)
-Byte 1-20:  custodian   bytes20  (hash160 of current or pending custodian)
-Byte 21-39: reserved    bytes19  (zero-filled — future-proof for timestamps, GPS, etc.)
+Byte 0     state       uint8    0x00 InCustody | 0x01 HandoffPending
+                                0x02 DeliveryPending | 0x04 Delivered (exited)
+Byte 1-20  custodian   bytes20  hash160 of the courier holding or expected to take the parcel
+Byte 21    reason      uint8    0x00 for everything shipped tonight
 ```
 
-### TypeScript encode/decode
+Fixed 22 bytes so every `split` is uniform. No reserved padding.
 
 ```ts
-function encodeCommitment(state: number, custodian: Uint8Array): Uint8Array {
-  const buf = new Uint8Array(40);
+export function encodeCommitment(state: number, custodian: Uint8Array, reason = 0): Uint8Array {
+  const buf = new Uint8Array(22);
   buf[0] = state;
-  buf.set(custodian, 1);  // bytes 1-20
-  return buf;             // bytes 21-39 remain zero
+  buf.set(custodian, 1);
+  buf[21] = reason;
+  return buf;
 }
 
-function decodeCommitment(buf: Uint8Array): { state: number; custodian: Uint8Array } {
-  return {
-    state: buf[0],
-    custodian: buf.slice(1, 21),
-  };
+export function decodeCommitment(buf: Uint8Array) {
+  return { state: buf[0], custodian: buf.slice(1, 21), reason: buf[21] };
 }
 ```
 
 ---
 
-## 6. Transaction Flow
+## 5. The delivery code
 
-### TX1 — Mint (Merchant creates parcel)
+### Why it must be on-chain
 
-| | Detail |
-|---|---|
-| **Inputs** | Minting NFT UTXO (contract) + Merchant BCH UTXO (funding) |
-| **Unlocks with** | `mint(merchantSig, merchantPk, courierAPkh)` |
-| **Creates** | Parcel NFT UTXO with **10,000 sats** + commitment `[state=0, custodian=A]` |
-| **Outputs** | Parcel NFT → contract addr, Minting NFT passthrough → contract addr, BCH change → merchant |
-| **Signer** | Merchant |
+If the backend merely looks up the code in a database before signing, a compromised backend
+skips the lookup and confirms delivery alone. The check must be a consensus rule:
 
-### TX2 — Handoff (Courier A → Courier B pending)
+```cashscript
+require(sha256(deliveryCode) == deliveryCodeHash);
+```
 
-| | Detail |
-|---|---|
-| **Input** | Parcel NFT UTXO (from TX1) |
-| **Unlocks with** | `handoff(courierASig, courierAPk, courierBPkh)` |
-| **Creates** | Parcel NFT UTXO with ~9,600 sats + commitment `[state=1, custodian=B]` |
-| **Signer** | Courier A |
-| **After** | Courier A cannot spend this UTXO anymore |
+### Entropy
 
-### TX3 — Accept Handoff (Courier B accepts)
+`deliveryCodeHash` is public in the locking bytecode. A 6-digit code is brute-forced in
+milliseconds. The preimage is **32 cryptographically random bytes**.
 
-| | Detail |
-|---|---|
-| **Input** | Parcel NFT UTXO (from TX2) |
-| **Unlocks with** | `acceptHandoff(courierBSig, courierBPk)` |
-| **Creates** | Parcel NFT UTXO with ~9,200 sats + commitment `[state=0, custodian=B]` |
-| **Signer** | Courier B |
+### Lifecycle — Path B (tonight)
 
-### TX4 — Request Delivery (Courier B → Recipient pending)
+```
+1. Backend generates 32 cryptographically random bytes → deliverySecret
+2. Backend computes sha256(deliverySecret) → deliveryCodeHash
+3. deliveryCodeHash goes into the contract constructor
+4. deliverySecret is transmitted to the recipient's account, once
+5. Backend DELETES the plaintext, retaining only the hash
+```
 
-| | Detail |
-|---|---|
-| **Input** | Parcel NFT UTXO (from TX3) |
-| **Unlocks with** | `requestDelivery(courierBSig, courierBPk)` |
-| **Creates** | Parcel NFT UTXO with ~8,800 sats + commitment `[state=2, custodian=recipientPkh]` |
-| **Signer** | Courier B |
-| **Key detail** | Recipient PKH comes from **constructor** — courier cannot redirect |
+This is an **operational and auditable** commitment, not a mathematical one. A dishonest
+platform could retain the plaintext. Path A (client-side generation) makes it mathematical
+and is on the roadmap. The contract is identical for both paths.
 
-### TX5a — Confirm Delivery (Recipient accepts) ★ HAPPY PATH ★
+### What the hash does and does not buy
 
-| | Detail |
-|---|---|
-| **Input** | Parcel NFT UTXO (from TX4) |
-| **Unlocks with** | `confirmDelivery(recipientSig, recipientPk)` |
-| **Creates** | Parcel NFT UTXO with ~8,400 sats + commitment `[state=3, custodian=0x00...00]` |
-| **Signer** | Recipient **(only!)** |
-| **Key check** | `hash160(recipientPk) == this.recipientPkh` |
+- Does **not** add entropy — `sha256(weak)` is as weak as `weak`.
+- Does **not** create freshness — replay is prevented by per-delivery uniqueness and terminal exit.
+- **Does** buy secret-at-rest separation — the marketplace commits to a secret it cannot read.
 
-### TX5b — Reject Delivery (Recipient refuses) ★ ALTERNATE ENDING ★
-
-| | Detail |
-|---|---|
-| **Input** | Parcel NFT UTXO (from TX4) |
-| **Unlocks with** | `reject(recipientSig, recipientPk)` |
-| **Creates** | Parcel NFT UTXO with ~8,400 sats + commitment `[state=4, custodian=0x00...00]` |
-| **Signer** | Recipient **(only!)** |
-| **Key check** | `hash160(recipientPk) == this.recipientPkh` |
-
-### TX5c — Initiate Return (Courier gives up, sends back) ★ ALTERNATE ENDING ★
-
-| | Detail |
-|---|---|
-| **Input** | Parcel NFT UTXO (from TX4) |
-| **Unlocks with** | `returnToSender(courierBSig, courierBPk)` |
-| **Creates** | Parcel NFT UTXO with ~8,400 sats + commitment `[state=5, custodian=merchantPkh]` |
-| **Signer** | Courier B |
-| **Key detail** | Merchant PKH comes from **constructor** — courier cannot redirect return |
-
-### TX6 — Confirm Return (Merchant receives returned parcel)
-
-| | Detail |
-|---|---|
-| **Input** | Parcel NFT UTXO (from TX5c) |
-| **Unlocks with** | `confirmReturn(merchantSig, merchantPk)` |
-| **Creates** | Parcel NFT UTXO with ~8,000 sats + commitment `[state=6, custodian=0x00...00]` |
-| **Signer** | Merchant **(only!)** |
-| **Key check** | `hash160(merchantPk) == this.merchantPkh` |
+The preimage becomes permanently public the instant `confirmDelivery` is broadcast. Per-delivery
+key derivation prevents cross-parcel linkage.
 
 ---
 
-## 7. Gas / Fee Model
+## 6. Courier authorisation — registry attestation
 
-### Merchant pre-funds everything
+The registry signs a courier's public key hash **once at onboarding**. The credential is a
+reusable, parcel-agnostic membership badge consumed by `handoff`:
 
-The contract UTXO carries its own gas money. Merchant includes **10,000 sats** in the mint output:
-
-```
-TX1 (mint):              10,000 sats
-TX2 (handoff):            9,600 sats  (10,000 - 400)
-TX3 (accept):             9,200 sats  (9,600 - 400)
-TX4 (requestDelivery):    8,800 sats  (9,200 - 400)
-TX5a/b/c (deliver/reject/return): 8,400 sats  (8,800 - 400)
-TX6 (confirmReturn):      8,000 sats  (8,400 - 400) — terminal
+```cashscript
+require(checkDataSig(registryAttestation, nextCustodian, registryPk));
 ```
 
-The happy path (TX1→TX5a) uses 1,600 sats. The return path (TX1→TX5c→TX6) uses 2,000 sats. 10,000 sats covers either with 5x headroom.
+**Scope:** the registry can admit members; it cannot forge custody. Every hop still requires
+the outgoing courier's signature and the incoming courier's signature.
 
-### Who pays what
+**Demo:** a single fixture registry keypair. The attestation is generated at startup for each
+fixture courier.
 
-| Actor | BCH needed? | Pays for |
+**Production hardening (designed, not built):** sign `nextCustodian + expiryHeight` and add
+`require(tx.locktime < expiryHeight)` to `handoff`.
+
+---
+
+## 7. Fee model
+
+```
+Mint:                 25,000 sats
+Per transition:       ~2,000 sats reserved
+Happy path (4 spends): ~8,000 sats
+Headroom:             ~2.5x
+```
+
+The marketplace pre-funds the parcel's UTXO. Nobody else ever needs Bitcoin Cash.
+Residual sats ride out to the recipient's P2PKH on the terminal spend.
+
+---
+
+## 8. Integration surface
+
+| Endpoint | Caller | Effect |
 |---|---|---|
-| Merchant | **Yes** | Minting + pre-funding entire tracking chain (~10,000 sats ≈ $0.00025 on chipnet) |
-| Courier A | No | Nothing — signs with keypair only |
-| Courier B | No | Nothing — signs with keypair only |
-| Recipient | **No** | Nothing — signs with keypair only |
+| `POST /parcels` | Marketplace | Derives recipient key, generates `deliveryCodeHash` (Path B), deploys contract, mints NFT with courier A |
+| `GET /parcels/:id` | Anyone | Reconstructed custody chain from unspent-output history |
+| `POST /parcels/:id/handoff` | Logistics (courier A) | Builds + signs `handoff` with the scanned attestation |
+| `POST /parcels/:id/accept` | Logistics (courier B) | Builds + signs `acceptHandoff` |
+| `POST /parcels/:id/request-delivery` | Logistics | Builds + signs `requestDelivery` |
+| `POST /parcels/:id/confirm` | Logistics (relays scanned code) | Marketplace verifies preimage, co-signs, broadcasts `confirmDelivery` |
 
-### Edge cases
+Deferred: `POST /parcels/:id/return`, `POST /parcels/:id/confirm-return`, `POST /couriers/enrol`.
 
-- **Too little BCH**: Transaction fails on-chain. Couriier can top-up by adding a BCH input. TypeScript wrapper detects `inputAmount < dust + fee` and auto-funds.
-- **Too much BCH**: Extra sats sit in the UTXO. At terminal states, locked forever. Chipnet dust is irrelevant (< $0.01).
-- **Courier payment is separate**: This contract tracks **custody only**. Courier compensation happens off-chain through the e-commerce platform's existing billing. The BCH in the UTXO is gas money for miners, not payment for delivery work.
+### QR payloads
 
----
-
-## 8. QR Code Integration (Off-Chain UX)
-
-| Step | QR generated by | QR payload | Scanned by | Triggers |
-|---|---|---|---|---|
-| Handoff | Courier A | contract address + `{fn: "acceptHandoff"}` | Courier B | TX3 |
-| Delivery | Courier B | contract address + `{fn: "confirmDelivery"}`, `{fn: "reject"}` | Recipient | TX5a or TX5b |
-| Return | Courier B | contract address + `{fn: "confirmReturn"}` | Merchant | TX6 |
-
-The delivery QR offers the recipient **two buttons**: Accept and Reject. Both call the same contract but different functions. The wallet constructs and signs either `confirmDelivery()` or `reject()` — the recipient chooses.
-
-The return QR is shown to the merchant when the courier hands the parcel back — same pattern as delivery, but merchant confirms instead of recipient.
+| QR | Shown by | Scanned by | Contains |
+|---|---|---|---|
+| Courier identity | Incoming courier's device | Outgoing courier | `{ pkh, registryAttestation }` |
+| Delivery code | Recipient's marketplace app | Last-mile courier | `{ parcelId, deliverySecret }` |
 
 ---
 
-## 9. Architecture Decisions
+## 9. Architecture decisions
 
 | Decision | Choice | Rationale |
 |---|---|---|
-| Recipient storage | Constructor parameter | Immutable, readable in all functions, frees 20 bytes in commitment |
-| Merchant storage | Constructor parameter | Immutable, needed for return confirmation |
-| Custodian storage | NFT commitment (bytes 1-20) | Mutable per state transition |
-| State storage | NFT commitment (byte 0) | 7 states fit in 1 byte |
-| Contract deployment | One per parcel | Each parcel has unique recipient + merchant |
-| Fee strategy | Pre-funded UTXO | Recipient should not need BCH for any action; UX win |
-| Handoff trust model | Trusted push (A initiates, B accepts) | Simpler than dual-signature trustless handoff |
-| Return trust model | Courier initiates, merchant confirms | Two-party agreement; courier can't unilaterally "lose" package, merchant can't unilaterally recall |
-| BCH network | Chipnet | Testnet with real Electrum protocol, zero cost |
-| CashScript version | 0.13 | Current stable; `tx.inputs[x].nftCommitment` not available, use off-chain validation + output enforcement |
+| Recipient / merchant / code hash / registry key | Constructor params | Immutable, publicly auditable at the contract address |
+| Custodian / state / reason | NFT commitment (22 bytes) | Mutable per transition; fits the 40-byte cap with room |
+| Terminal states | Exit to P2PKH | Terminal by construction, not by state check |
+| Mint | Covenant function (demo) | One contract does everything; production uses plain wallet send |
+| Fee strategy | Pre-funded UTXO (25,000 sats) | Nobody else needs BCH; UX win |
+| Delivery secret | Server-generated, deleted (Path B) | Less app work; contract identical for Path A upgrade |
+| Auth | Fixture keys (demo) | Deferred — see `SPEC/AUTH.md` |
+| Contract deployment | One per parcel | Each parcel has unique recipient + merchant + code hash |
 
 ---
 
-## 10. Limitations
+## 10. Load-bearing requires (do not omit)
 
-- **Stranded parcels on wrong PKH**: If Courier A sets wrong PKH in `handoff()`, parcel is stuck. No clawback. Mitigation: TypeScript wrapper validates PKH format before building tx.
-- **No courier accountability for acceptance**: Courier B can refuse to call `acceptHandoff()` — the parcel sits in `HandoffPending` forever. The contract can't force acceptance. Mitigation: off-chain SLA between courier companies.
-- **Unresponsive recipient**: If recipient never scans the delivery QR, the courier's only recourse is `returnToSender()`. There's no automatic timeout. Mitigation: courier company policy (return after N days).
-- **No multi-parcel batching**: One contract deployment per parcel.
-- **No timestamp/GPS in commitment**: Bytes 21-39 reserved but unused.
-- **CashScript 0.13 input commitment limitation**: Contract can't read `tx.inputs[x].nftCommitment`. Current state is passed as argument + verified by signature only. Off-chain TypeScript wrapper ensures consistency.
-- **No BCH recovery from terminal states**: BCH locked in Delivered/Rejected/Returned UTXOs is permanently inaccessible. Trivial on chipnet (~$0.00025).
+1. `lockingBytecode == tx.inputs[idx].lockingBytecode` — without it the NFT escapes the covenant.
+2. `value >= tx.inputs[idx].value - 2000` — without it a courier pockets the pre-funded sats.
+3. `tokenCategory` comparison — without it the NFT can be swapped or downgraded mid-route.
+4. State and custodian read from `tx.inputs[idx].nftCommitment`, **never** from a function
+   argument. Caller-supplied state makes `custodian == hash160(courierPk)` self-satisfying.
 
 ---
 
-## 11. References
+## 11. Reference
 
-- **[SPEC/AUTH.md](./AUTH.md)** — Authentication flow, WalletConnect V2 BCH integration, `IWalletConnector` port, mock wallet for dev, actor key management for the demo.
-
-## 12. Projected File Structure
-
-```
-cashscript_hackathon/
-├── SPEC/
-│   └── parcel-tracker.md          ← this file
-├── contracts/
-│   └── ParcelTracker.cash         ← CashScript state machine (7 states, 7 functions)
-├── artifacts/
-│   └── ParcelTracker.json         ← compiled, .gitignored
-├── packages/
-│   ├── shared/
-│   │   └── src/
-│   │       ├── index.ts
-│   │       ├── types.ts           ← State enum (0-6), Commitment type, UTXO shape
-│   │       └── commitment.ts      ← encodeCommitment(), decodeCommitment()
-│   └── backend/
-│       └── src/
-│           ├── infrastructure/
-│           │   └── ParcelTracker.ts  ← CashScript SDK wrapper (all 7 transitions)
-│           └── index.ts
-├── bun.lock
-├── package.json
-└── tsconfig.json
-```
+- Full v2 design: `files/parcel-tracker-v2.md`
+- Build brief: `files/BUILD-TONIGHT.md`
+- Auth (deferred): `SPEC/AUTH.md`, `files/parcel-tracker-auth.md`

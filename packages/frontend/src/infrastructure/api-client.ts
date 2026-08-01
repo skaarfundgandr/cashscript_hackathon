@@ -1,154 +1,74 @@
-export interface ChallengeDto {
-  nonce: string;
-  message?: string;
-}
+const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
-export interface AuthDto {
-  token: string;
-  address?: string;
-}
-
-export interface ParcelDto {
-  contractId: string;
+export interface ParcelChainEntry {
+  txid: string;
   state: number;
   custodian: string;
-  recipientPkh: string;
-  merchantPkh: string;
-  createdAt?: string;
+}
+
+export interface CreateParcelResponse {
+  contractId: string;
+  address: string;
+  txid: string;
+  deliverySecret: string;
 }
 
 export class ApiClient {
-  private readonly baseUrl: string;
-  private readonly tokenKey = 'parcel_tracker_token';
-
-  constructor(baseUrl = '/api') {
-    this.baseUrl = baseUrl.replace(/\/$/, '');
-  }
-
-  private getToken(): string | null {
-    return localStorage.getItem(this.tokenKey);
-  }
-
-  setToken(token: string): void {
-    localStorage.setItem(this.tokenKey, token);
-  }
-
-  clearToken(): void {
-    localStorage.removeItem(this.tokenKey);
-  }
-
-  private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
-    const headers = new Headers(init.headers);
-    headers.set('Content-Type', 'application/json');
-    const token = this.getToken();
-    if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
-    }
-    const response = await fetch(`${this.baseUrl}${path}`, { ...init, headers });
-    if (!response.ok) {
-      throw new Error(await this.errorMessage(response));
-    }
-    if (response.status === 204) {
-      return undefined as T;
-    }
-    return (await response.json()) as T;
-  }
-
-  private async errorMessage(response: Response): Promise<string> {
-    const body = await response.text();
-    try {
-      const parsed = JSON.parse(body) as Record<string, unknown>;
-      if (typeof parsed.error === 'string') {
-        return parsed.error;
-      }
-      if (typeof parsed.message === 'string') {
-        return parsed.message;
-      }
-    } catch {
-      // fall through to status message
-    }
-    return `Request failed with status ${response.status}`;
-  }
-
-  async get<T>(path: string): Promise<T> {
-    return this.request<T>(path);
-  }
-
-  async post<T>(path: string, body: unknown): Promise<T> {
-    return this.request<T>(path, {
+  async createParcel(courierId: string): Promise<CreateParcelResponse> {
+    const res = await fetch(`${BASE_URL}/parcel/create`, {
       method: 'POST',
-      body: JSON.stringify(body),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ courierId }),
     });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
   }
 
-  getChallenge(address: string): Promise<ChallengeDto> {
-    return this.get<ChallengeDto>(`/challenge?address=${encodeURIComponent(address)}`);
-  }
-
-  verifyAuth(address: string, nonce: string, signature: string): Promise<AuthDto> {
-    return this.post<AuthDto>('/auth/verify', { address, nonce, signature });
-  }
-
-  createParcel(merchantPk: string, recipientPkh: string, courierPkh: string): Promise<ParcelDto> {
-    return this.post<ParcelDto>('/parcels', { merchantPk, recipientPkh, courierPkh });
-  }
-
-  getParcel(contractId: string): Promise<ParcelDto> {
-    return this.get<ParcelDto>(`/parcels/${encodeURIComponent(contractId)}`);
-  }
-
-  handoff(
-    contractId: string,
-    courierSig: string,
-    courierPk: string,
-    nextCustodian: string,
-  ): Promise<ParcelDto> {
-    return this.post<ParcelDto>(`/parcels/${encodeURIComponent(contractId)}/handoff`, {
-      courierSig,
-      courierPk,
-      nextCustodian,
+  async handoff(parcelId: string, courierId: string, nextCourierId: string): Promise<{ txid: string }> {
+    const res = await fetch(`${BASE_URL}/parcel/${parcelId}/handoff`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ courierId, nextCourierId }),
     });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
   }
 
-  acceptHandoff(contractId: string, courierSig: string, courierPk: string): Promise<ParcelDto> {
-    return this.post<ParcelDto>(`/parcels/${encodeURIComponent(contractId)}/accept-handoff`, {
-      courierSig,
-      courierPk,
+  async acceptHandoff(parcelId: string, courierId: string): Promise<{ txid: string }> {
+    const res = await fetch(`${BASE_URL}/parcel/${parcelId}/accept-handoff`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ courierId }),
     });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
   }
 
-  requestDelivery(contractId: string, courierSig: string, courierPk: string): Promise<ParcelDto> {
-    return this.post<ParcelDto>(`/parcels/${encodeURIComponent(contractId)}/request-delivery`, {
-      courierSig,
-      courierPk,
+  async requestDelivery(parcelId: string, courierId: string): Promise<{ txid: string }> {
+    const res = await fetch(`${BASE_URL}/parcel/${parcelId}/request-delivery`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ courierId }),
     });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
   }
 
-  confirmDelivery(contractId: string, recipientSig: string, recipientPk: string): Promise<ParcelDto> {
-    return this.post<ParcelDto>(`/parcels/${encodeURIComponent(contractId)}/confirm-delivery`, {
-      recipientSig,
-      recipientPk,
+  async confirmDelivery(parcelId: string, courierId: string, deliveryCode: string): Promise<{ txid: string }> {
+    const res = await fetch(`${BASE_URL}/parcel/${parcelId}/confirm-delivery`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ courierId, deliveryCode }),
     });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
   }
 
-  rejectDelivery(contractId: string, recipientSig: string, recipientPk: string): Promise<ParcelDto> {
-    return this.post<ParcelDto>(`/parcels/${encodeURIComponent(contractId)}/reject-delivery`, {
-      recipientSig,
-      recipientPk,
-    });
-  }
-
-  returnToSender(contractId: string, courierSig: string, courierPk: string): Promise<ParcelDto> {
-    return this.post<ParcelDto>(`/parcels/${encodeURIComponent(contractId)}/return-to-sender`, {
-      courierSig,
-      courierPk,
-    });
-  }
-
-  confirmReturn(contractId: string, merchantSig: string, merchantPk: string): Promise<ParcelDto> {
-    return this.post<ParcelDto>(`/parcels/${encodeURIComponent(contractId)}/confirm-return`, {
-      merchantSig,
-      merchantPk,
-    });
+  async getParcel(parcelId: string): Promise<ParcelChainEntry[]> {
+    const res = await fetch(`${BASE_URL}/parcel/${parcelId}`);
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
   }
 }
+
+export const apiClient = new ApiClient();
