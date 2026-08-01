@@ -1,0 +1,101 @@
+pragma cashscript ^0.13.0;
+
+contract ParcelTracker(bytes20 recipientPkh, bytes20 merchantPkh) {
+    function handoff(sig courierSig, pubkey courierPk, bytes20 nextCustodian) {
+        bytes currentCommitment = tx.inputs[this.activeInputIndex].nftCommitment;
+        require(int(currentCommitment.slice(0, 1)) == 0);
+        require(hash160(courierPk) == currentCommitment.slice(1, 21));
+        require(checkSig(courierSig, courierPk));
+
+        bytes newCommitment = 0x01 + nextCustodian + 0x00000000000000000000000000000000000000;
+        require(tx.outputs[0].value >= 1000);
+        require(tx.outputs[0].tokenCategory == tx.inputs[this.activeInputIndex].tokenCategory);
+        require(tx.outputs[0].tokenAmount == tx.inputs[this.activeInputIndex].tokenAmount);
+        require(tx.outputs[0].nftCommitment == newCommitment);
+        require(tx.outputs[0].lockingBytecode == this.activeBytecode);
+    }
+
+    function acceptHandoff(sig courierSig, pubkey courierPk) {
+        bytes currentCommitment = tx.inputs[this.activeInputIndex].nftCommitment;
+        require(int(currentCommitment.slice(0, 1)) == 1);
+        require(hash160(courierPk) == currentCommitment.slice(1, 21));
+        require(checkSig(courierSig, courierPk));
+
+        bytes newCommitment = 0x00 + currentCommitment.slice(1, 21) + 0x00000000000000000000000000000000000000;
+        require(tx.outputs[0].value >= 1000);
+        require(tx.outputs[0].tokenCategory == tx.inputs[this.activeInputIndex].tokenCategory);
+        require(tx.outputs[0].tokenAmount == tx.inputs[this.activeInputIndex].tokenAmount);
+        require(tx.outputs[0].nftCommitment == newCommitment);
+        require(tx.outputs[0].lockingBytecode == this.activeBytecode);
+    }
+
+    function requestDelivery(sig courierSig, pubkey courierPk) {
+        bytes currentCommitment = tx.inputs[this.activeInputIndex].nftCommitment;
+        require(int(currentCommitment.slice(0, 1)) == 0);
+        require(hash160(courierPk) == currentCommitment.slice(1, 21));
+        require(checkSig(courierSig, courierPk));
+
+        bytes newCommitment = 0x02 + recipientPkh + 0x00000000000000000000000000000000000000;
+        require(tx.outputs[0].value >= 1000);
+        require(tx.outputs[0].tokenCategory == tx.inputs[this.activeInputIndex].tokenCategory);
+        require(tx.outputs[0].tokenAmount == tx.inputs[this.activeInputIndex].tokenAmount);
+        require(tx.outputs[0].nftCommitment == newCommitment);
+        require(tx.outputs[0].lockingBytecode == this.activeBytecode);
+    }
+
+    function confirmDelivery(sig recipientSig, pubkey recipientPk) {
+        bytes currentCommitment = tx.inputs[this.activeInputIndex].nftCommitment;
+        require(int(currentCommitment.slice(0, 1)) == 2);
+        require(hash160(recipientPk) == recipientPkh);
+        require(checkSig(recipientSig, recipientPk));
+
+        bytes newCommitment = 0x03 + 0x0000000000000000000000000000000000000000 + 0x00000000000000000000000000000000000000;
+        require(tx.outputs[0].value >= 1000);
+        require(tx.outputs[0].tokenCategory == tx.inputs[this.activeInputIndex].tokenCategory);
+        require(tx.outputs[0].tokenAmount == tx.inputs[this.activeInputIndex].tokenAmount);
+        require(tx.outputs[0].nftCommitment == newCommitment);
+        require(tx.outputs[0].lockingBytecode == this.activeBytecode);
+    }
+
+    function reject(sig recipientSig, pubkey recipientPk) {
+        bytes currentCommitment = tx.inputs[this.activeInputIndex].nftCommitment;
+        require(int(currentCommitment.slice(0, 1)) == 2);
+        require(hash160(recipientPk) == recipientPkh);
+        require(checkSig(recipientSig, recipientPk));
+
+        bytes newCommitment = 0x04 + 0x0000000000000000000000000000000000000000 + 0x00000000000000000000000000000000000000;
+        require(tx.outputs[0].value >= 1000);
+        require(tx.outputs[0].tokenCategory == tx.inputs[this.activeInputIndex].tokenCategory);
+        require(tx.outputs[0].tokenAmount == tx.inputs[this.activeInputIndex].tokenAmount);
+        require(tx.outputs[0].nftCommitment == newCommitment);
+        require(tx.outputs[0].lockingBytecode == this.activeBytecode);
+    }
+
+    function returnToSender(sig courierSig, pubkey courierPk) {
+        bytes currentCommitment = tx.inputs[this.activeInputIndex].nftCommitment;
+        require(int(currentCommitment.slice(0, 1)) == 2);
+        require(hash160(courierPk) == currentCommitment.slice(1, 21));
+        require(checkSig(courierSig, courierPk));
+
+        bytes newCommitment = 0x05 + merchantPkh + 0x00000000000000000000000000000000000000;
+        require(tx.outputs[0].value >= 1000);
+        require(tx.outputs[0].tokenCategory == tx.inputs[this.activeInputIndex].tokenCategory);
+        require(tx.outputs[0].tokenAmount == tx.inputs[this.activeInputIndex].tokenAmount);
+        require(tx.outputs[0].nftCommitment == newCommitment);
+        require(tx.outputs[0].lockingBytecode == this.activeBytecode);
+    }
+
+    function confirmReturn(sig merchantSig, pubkey merchantPk) {
+        bytes currentCommitment = tx.inputs[this.activeInputIndex].nftCommitment;
+        require(int(currentCommitment.slice(0, 1)) == 5);
+        require(hash160(merchantPk) == merchantPkh);
+        require(checkSig(merchantSig, merchantPk));
+
+        bytes newCommitment = 0x06 + 0x0000000000000000000000000000000000000000 + 0x00000000000000000000000000000000000000;
+        require(tx.outputs[0].value >= 1000);
+        require(tx.outputs[0].tokenCategory == tx.inputs[this.activeInputIndex].tokenCategory);
+        require(tx.outputs[0].tokenAmount == tx.inputs[this.activeInputIndex].tokenAmount);
+        require(tx.outputs[0].nftCommitment == newCommitment);
+        require(tx.outputs[0].lockingBytecode == this.activeBytecode);
+    }
+}
