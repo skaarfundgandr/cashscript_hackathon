@@ -1,0 +1,58 @@
+# === Node.js ===
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# === CashScript build artifacts ===
+# Compiled contract artifacts (JSON ABI + bytecode)
+artifacts/
+*.cash.json
+# CashScript compiler cache
+.cashscript/
+# Mainnet artifact files (safety — never commit mainnet contracts lightly)
+*.mainnet.json
+
+# === Environment ===
+.env
+.env.local
+.env.*.local
+*.env
+
+# === IDE / Editors ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# === OS ===
+.DS_Store
+Thumbs.db
+.directory
+
+# === Build / Dist ===
+dist/
+build/
+out/
+
+# === Testing ===
+coverage/
+.nyc_output/
+*.lcov
+
+# === Logs ===
+*.log
+
+# === Misc ===
+.cache/
+tmp/
+temp/
