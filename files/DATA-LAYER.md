@@ -6,6 +6,30 @@
 
 ---
 
+## ⚠ Partially superseded by `SHOP-BACKEND.md`
+
+This document's analysis of the custody backend — its API, its ten quirks, its blockers, and the
+derived pkh table — **stands and is verified.** Read it for those.
+
+But six of its decisions were made when there was no shop server to ask. There is one now
+(`packages/shop-backend`, Phase 1b). Do not build the following from this document:
+
+| Section | This document says | `SHOP-BACKEND.md` says |
+|---|---|---|
+| Locked decisions · Orders | Owned by the shop, **client-side** | Owned by `packages/shop-backend`, server-side |
+| Locked decisions · Delivery secret | Stored in the buyer's `localStorage` | Held by the shop backend; released only via `POST /shop/orders/:id/reveal-code` |
+| The port | `revealDeliveryCode` is **local only**, in `order-store.ts` | It is a server endpoint, and it stamps `revealedAt` server-side |
+| The two implementations | `infrastructure/fixture-api.ts`, a `localStorage` state machine | Became `packages/custody-fixture`, a server on `:3002` |
+| The two implementations | `select-api.ts` picks between two classes | `config.ts` picks a base URL |
+| Fixture fidelity | The fixture **reproduces B-1** faithfully | The fixture serves `0x04`; `B1=throw` replays the failure |
+
+Consequently `infrastructure/order-store.ts`, `infrastructure/fixture-api.ts` and
+`infrastructure/select-api.ts` are **not built.** Everything else in the file layout stands:
+`parcel.ts`, `identity.ts`, `qr-payloads.ts`, `role-store.ts`, `api-error.ts` and the `ParcelApi`
+port are unchanged.
+
+---
+
 ## The framing
 
 P1's job is to remove every dependency on other people. It does that by naming one seam and
