@@ -356,7 +356,7 @@ The return QR is shown to the merchant when the courier hands the parcel back â€
 | Handoff trust model | Trusted push (A initiates, B accepts) | Simpler than dual-signature trustless handoff |
 | Return trust model | Courier initiates, merchant confirms | Two-party agreement; courier can't unilaterally "lose" package, merchant can't unilaterally recall |
 | BCH network | Chipnet | Testnet with real Electrum protocol, zero cost |
-| CashScript version | 0.13 | Current stable; `tx.inputs[x].nftCommitment` not available, use off-chain validation + output enforcement |
+| CashScript version | 0.13 | Current stable; `tx.inputs[x].nftCommitment` available for reading input commitment state |
 
 ---
 
@@ -367,7 +367,7 @@ The return QR is shown to the merchant when the courier hands the parcel back â€
 - **Unresponsive recipient**: If recipient never scans the delivery QR, the courier's only recourse is `returnToSender()`. There's no automatic timeout. Mitigation: courier company policy (return after N days).
 - **No multi-parcel batching**: One contract deployment per parcel.
 - **No timestamp/GPS in commitment**: Bytes 21-39 reserved but unused.
-- **CashScript 0.13 input commitment limitation**: Contract can't read `tx.inputs[x].nftCommitment`. Current state is passed as argument + verified by signature only. Off-chain TypeScript wrapper ensures consistency.
+- **CashScript 0.13 input commitment**: `tx.inputs[x].nftCommitment` is available and used by the contract to read current state and custodian directly from the input UTXO.
 - **No BCH recovery from terminal states**: BCH locked in Delivered/Rejected/Returned UTXOs is permanently inaccessible. Trivial on chipnet (~$0.00025).
 
 ---
