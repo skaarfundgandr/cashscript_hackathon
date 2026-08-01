@@ -6,6 +6,7 @@ import { derivePublicKey } from '../libauth/key-store.js';
 import { Contract, ElectrumNetworkProvider, Network, SignatureTemplate, TransactionBuilder } from 'cashscript';
 import type { Artifact, Contract as ContractInstance, Unlocker, Utxo } from 'cashscript';
 import { IParcelContract, ParcelHistoryEntry } from '../../application/ports/parcel-contract.js';
+import { IContractStore } from '../../application/ports/contract-store.js';
 import { decodeCommitment, encodeCommitment, ParcelState } from '../../domain/index.js';
 
 const FEE_SATS = 2000n;
@@ -35,9 +36,11 @@ export class CashScriptParcelTracker implements IParcelContract {
   private readonly network: ElectrumNetworkProvider;
   private artifact: Artifact | undefined;
   private readonly contracts: Map<string, CachedContract> = new Map();
+  private readonly store: IContractStore | undefined;
 
-  constructor() {
-    this.network = new ElectrumNetworkProvider(Network.CHIPNET);
+  constructor(provider?: ElectrumNetworkProvider, store?: IContractStore) {
+    this.network = provider ?? new ElectrumNetworkProvider(Network.CHIPNET);
+    this.store = store;
   }
 
   private loadArtifact(): Artifact {
@@ -68,6 +71,13 @@ export class CashScriptParcelTracker implements IParcelContract {
     const txid = await this.sendNftTransition(genesisUtxo, unlocker, contract, fundingSatoshis, fundingTxid, commitment, contract.tokenAddress, 'mutable');
 
     this.contracts.set(contract.address, { contract, recipientPkh });
+    this.store?.save({
+      contractAddress: contract.address,
+      recipientPkh: binToHex(recipientPkh),
+      merchantPkh: binToHex(merchantPkh),
+      deliveryCodeHash: binToHex(deliveryCodeHash),
+      registryPk: binToHex(registryPk),
+    });
     return { contractId: contract.address, address: contract.address, txid };
   }
 
@@ -98,7 +108,15 @@ export class CashScriptParcelTracker implements IParcelContract {
 
   async getParcelHistory(contractId: string): Promise<Array<ParcelHistoryEntry>> {
     const utxos = await this.network.getUtxos(contractId);
-    const nftUtxo = utxos.find(isNftUtxo);
+    let nftUtxo = utxos.find(isNftUtxo);
+    if (!nftUtxo) {
+      const cached = this.contracts.get(contractId);
+      if (cached) {
+        const recipientAddress = encodeCashAddress({ prefix: BCH_TEST_PREFIX, type: 'p2pkh', payload: cached.recipientPkh }).address;
+        const recipientUtxos = await this.network.getUtxos(recipientAddress);
+        nftUtxo = recipientUtxos.find(isNftUtxo);
+      }
+    }
     if (!nftUtxo || !nftUtxo.token?.nft) {
       throw new Error(`No parcel NFT UTXO found for contract ${contractId}`);
     }
@@ -214,10 +232,21 @@ export class CashScriptParcelTracker implements IParcelContract {
 
   private getCachedContract(contractId: string): CachedContract {
     const cached = this.contracts.get(contractId);
-    if (!cached) {
-      throw new Error(`Unknown contract ${contractId}; deploy the parcel in this process before transitioning it`);
+    if (cached) return cached;
+
+    const record = this.store?.find(contractId);
+    if (record) {
+      const recipientPkh = hexToBin(record.recipientPkh);
+      const merchantPkh = hexToBin(record.merchantPkh);
+      const deliveryCodeHash = hexToBin(record.deliveryCodeHash);
+      const registryPk = hexToBin(record.registryPk);
+      const contract = new Contract(this.loadArtifact(), [recipientPkh, merchantPkh, deliveryCodeHash, registryPk], { provider: this.network });
+      const rehydrated: CachedContract = { contract, recipientPkh };
+      this.contracts.set(contractId, rehydrated);
+      return rehydrated;
     }
-    return cached;
+
+    throw new Error(`Unknown contract ${contractId}; deploy the parcel in this process before transitioning it`);
   }
 }
 
