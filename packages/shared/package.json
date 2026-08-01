@@ -1,9 +1,11 @@
 {
   "name": "@parcel-tracker/shared",
   "version": "0.1.0",
-  "type": "module",
   "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -13,7 +15,9 @@
   "scripts": {
     "build": "tsc"
   },
-  "devDependencies": {
-    "typescript": "^5.7.0"
+  "type": "module",
+  "types": "dist/index.d.ts",
+  "dependencies": {
+    "@bitauth/libauth": "^3.0.0"
   }
 }
