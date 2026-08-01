@@ -133,7 +133,7 @@ export class App {
 
   private async authenticate(): Promise<void> {
     const challenge = await this.api.getChallenge(this.address);
-    const signature = await this.wallet.signMessage(challenge.nonce);
+    const signature = await this.wallet.signMessage(challenge.message);
     const auth = await this.api.verifyAuth(this.address, challenge.nonce, signature);
     this.api.setToken(auth.token);
   }

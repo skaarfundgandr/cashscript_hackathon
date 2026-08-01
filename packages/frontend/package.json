@@ -8,6 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@bitauth/libauth": "^3.0.0",
     "@parcel-tracker/shared": "workspace:*"
   },
   "devDependencies": {

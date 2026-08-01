@@ -1,6 +1,6 @@
 export interface ChallengeDto {
   nonce: string;
-  message?: string;
+  message: string;
 }
 
 export interface AuthDto {
