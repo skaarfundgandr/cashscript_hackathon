@@ -1,0 +1,22 @@
+{
+  "name": "@parcel-tracker/backend",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch src/main.ts",
+    "build": "tsc",
+    "start": "bun run dist/main.js"
+  },
+  "dependencies": {
+    "@parcel-tracker/shared": "workspace:*",
+    "cashscript": "^0.13.0",
+    "@bitauth/libauth": "^3.0.0",
+    "elysia": "^1.2.0",
+    "@elysiajs/jwt": "^1.2.0",
+    "@elysiajs/cors": "^1.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/node": "^22.0.0"
+  }
+}
