@@ -1,0 +1,29 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    ports:
+      - "3000:3000"
+
+  shop-backend:
+    build:
+      context: .
+      dockerfile: docker/shop-backend.Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      CUSTODY_URL: http://backend:3000
+    depends_on:
+      - backend
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+      args:
+        VITE_API_URL: http://localhost:3000
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
