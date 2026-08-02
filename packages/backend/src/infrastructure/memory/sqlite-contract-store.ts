@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS contracts (
   recipient_pkh       TEXT NOT NULL,
   merchant_pkh        TEXT NOT NULL,
   delivery_code_hash  TEXT NOT NULL,
-  registry_pk         TEXT NOT NULL
+  registry_pk         TEXT NOT NULL,
+  nft_category        TEXT NOT NULL
 )`;
 
 interface ContractRow {
@@ -17,6 +18,7 @@ interface ContractRow {
   merchant_pkh: string;
   delivery_code_hash: string;
   registry_pk: string;
+  nft_category: string;
 }
 
 export class SqliteContractStore implements IContractStore {
@@ -27,8 +29,8 @@ export class SqliteContractStore implements IContractStore {
   save(record: ContractRecord): void {
     this.db
       .query(
-        `INSERT OR REPLACE INTO contracts (contract_address, recipient_pkh, merchant_pkh, delivery_code_hash, registry_pk)
-         VALUES ($contractAddress, $recipientPkh, $merchantPkh, $deliveryCodeHash, $registryPk)`,
+        `INSERT OR REPLACE INTO contracts (contract_address, recipient_pkh, merchant_pkh, delivery_code_hash, registry_pk, nft_category)
+         VALUES ($contractAddress, $recipientPkh, $merchantPkh, $deliveryCodeHash, $registryPk, $nftCategory)`,
       )
       .run({
         $contractAddress: record.contractAddress,
@@ -36,6 +38,7 @@ export class SqliteContractStore implements IContractStore {
         $merchantPkh: record.merchantPkh,
         $deliveryCodeHash: record.deliveryCodeHash,
         $registryPk: record.registryPk,
+        $nftCategory: record.nftCategory,
       });
   }
 
@@ -50,6 +53,7 @@ export class SqliteContractStore implements IContractStore {
       merchantPkh: row.merchant_pkh,
       deliveryCodeHash: row.delivery_code_hash,
       registryPk: row.registry_pk,
+      nftCategory: row.nft_category,
     };
   }
 

@@ -6,6 +6,7 @@ export interface ContractRecord {
   merchantPkh: string;
   deliveryCodeHash: string;
   registryPk: string;
+  nftCategory: string;
 }
 
 export interface IContractStore {

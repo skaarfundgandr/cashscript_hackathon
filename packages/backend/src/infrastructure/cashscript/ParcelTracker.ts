@@ -77,6 +77,7 @@ export class CashScriptParcelTracker implements IParcelContract {
       merchantPkh: binToHex(merchantPkh),
       deliveryCodeHash: binToHex(deliveryCodeHash),
       registryPk: binToHex(registryPk),
+      nftCategory: fundingTxid,
     });
     return { contractId: contract.address, address: contract.address, txid };
   }
@@ -110,11 +111,23 @@ export class CashScriptParcelTracker implements IParcelContract {
     const utxos = await this.network.getUtxos(contractId);
     let nftUtxo = utxos.find(isNftUtxo);
     if (!nftUtxo) {
+      let recipientPkh: Uint8Array | undefined;
       const cached = this.contracts.get(contractId);
       if (cached) {
-        const recipientAddress = encodeCashAddress({ prefix: BCH_TEST_PREFIX, type: 'p2pkh', payload: cached.recipientPkh }).address;
+        recipientPkh = cached.recipientPkh;
+      } else {
+        const record = this.store?.find(contractId);
+        if (record) {
+          recipientPkh = hexToBin(record.recipientPkh);
+        }
+      }
+      if (recipientPkh) {
+        const recipientAddress = encodeCashAddress({ prefix: BCH_TEST_PREFIX, type: 'p2pkh', payload: recipientPkh }).address;
         const recipientUtxos = await this.network.getUtxos(recipientAddress);
-        nftUtxo = recipientUtxos.find(isNftUtxo);
+        const record = this.store?.find(contractId);
+        nftUtxo = record
+          ? recipientUtxos.find((u): u is NftUtxo => isNftUtxo(u) && u.token.category === record.nftCategory)
+          : recipientUtxos.find(isNftUtxo);
       }
     }
     if (!nftUtxo || !nftUtxo.token?.nft) {
@@ -241,6 +254,9 @@ export class CashScriptParcelTracker implements IParcelContract {
       const deliveryCodeHash = hexToBin(record.deliveryCodeHash);
       const registryPk = hexToBin(record.registryPk);
       const contract = new Contract(this.loadArtifact(), [recipientPkh, merchantPkh, deliveryCodeHash, registryPk], { provider: this.network });
+      if (contract.address !== contractId) {
+        throw new Error(`Rehydrated contract address mismatch for ${contractId}: got ${contract.address}`);
+      }
       const rehydrated: CachedContract = { contract, recipientPkh };
       this.contracts.set(contractId, rehydrated);
       return rehydrated;

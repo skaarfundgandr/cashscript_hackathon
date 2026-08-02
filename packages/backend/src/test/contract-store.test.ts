@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'bun:test';
 import { Database } from 'bun:sqlite';
-import { binToHex, hash160 } from '@bitauth/libauth';
+import { binToHex, hash160, hexToBin } from '@bitauth/libauth';
+import { Contract } from 'cashscript';
+import type { Artifact } from 'cashscript';
 import { derivePublicKey } from '../infrastructure/libauth/key-store.js';
 import { CashScriptParcelTracker } from '../infrastructure/cashscript/ParcelTracker.js';
 import { SqliteContractStore } from '../infrastructure/memory/sqlite-contract-store.js';
@@ -11,6 +13,7 @@ function makeRecord(): {
   merchantPkh: string;
   deliveryCodeHash: string;
   registryPk: string;
+  nftCategory: string;
 } {
   const merchantPk = new Uint8Array(32).fill(1);
   return {
@@ -19,6 +22,7 @@ function makeRecord(): {
     merchantPkh: binToHex(hash160(derivePublicKey(merchantPk))),
     deliveryCodeHash: binToHex(new Uint8Array(32).fill(3)),
     registryPk: binToHex(new Uint8Array(32).fill(4)),
+    nftCategory: binToHex(new Uint8Array(32).fill(5)),
   };
 }
 
@@ -71,11 +75,13 @@ describe('CashScriptParcelTracker rehydration', () => {
   it('rehydrates a contract from the store on cache miss', () => {
     const store = new SqliteContractStore(new Database(':memory:'));
     const record = makeRecord();
-    store.save(record);
+    const artifact = makeArtifact() as Artifact;
+    const contract = new Contract(artifact, [hexToBin(record.recipientPkh), hexToBin(record.merchantPkh), hexToBin(record.deliveryCodeHash), hexToBin(record.registryPk)], { provider: {} } as any);
+    store.save({ ...record, contractAddress: contract.address });
     const tracker = new CashScriptParcelTracker({} as any, store);
-    (tracker as any).artifact = makeArtifact();
+    (tracker as any).artifact = artifact;
 
-    const cached = (tracker as any).getCachedContract(record.contractAddress);
+    const cached = (tracker as any).getCachedContract(contract.address);
 
     expect(cached.contract).toBeDefined();
     expect(binToHex(cached.recipientPkh)).toBe(record.recipientPkh);

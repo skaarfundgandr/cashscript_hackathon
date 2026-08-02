@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'bun:test';
+import { Database } from 'bun:sqlite';
 import { binToHex, encodeCashAddress, encodeTransactionBCH, hashTransaction, hexToBin } from '@bitauth/libauth';
 import type { Utxo } from 'cashscript';
 import { encodeCommitment } from '../domain/index.js';
 import { CashScriptParcelTracker } from '../infrastructure/cashscript/ParcelTracker.js';
+import { SqliteContractStore } from '../infrastructure/memory/sqlite-contract-store.js';
 
 const CONTRACT_ADDRESS = 'bchtest:contract';
 const CATEGORY = new Uint8Array(32).fill(7);
@@ -142,6 +144,34 @@ describe('CashScriptParcelTracker.getParcelHistory', () => {
     const { utxos, rawTxs } = buildFakeChain(states, recipientAddress);
     const tracker = makeTracker(utxos, rawTxs);
     (tracker as any).contracts.set(CONTRACT_ADDRESS, { contract: {}, recipientPkh });
+
+    const history = await tracker.getParcelHistory(CONTRACT_ADDRESS);
+
+    expect(history).toHaveLength(5);
+    expect(history.map((e) => e.state)).toEqual([0, 1, 0, 2, 4]);
+  });
+
+  it('returns full history from store fallback after restart (no in-memory cache)', async () => {
+    const recipientPkh = new Uint8Array(20).fill(9);
+    const recipientAddress = encodeCashAddress({ prefix: 'bchtest', type: 'p2pkh', payload: recipientPkh }).address;
+    const states: Array<ParcelHop> = [
+      { state: 0, custodian: new Uint8Array(20).fill(1) },
+      { state: 1, custodian: new Uint8Array(20).fill(2) },
+      { state: 0, custodian: new Uint8Array(20).fill(3) },
+      { state: 2, custodian: new Uint8Array(20).fill(4) },
+      { state: 4, custodian: new Uint8Array(20).fill(5) },
+    ];
+    const { utxos, rawTxs } = buildFakeChain(states, recipientAddress);
+    const store = new SqliteContractStore(new Database(':memory:'));
+    store.save({
+      contractAddress: CONTRACT_ADDRESS,
+      recipientPkh: binToHex(recipientPkh),
+      merchantPkh: binToHex(new Uint8Array(20)),
+      deliveryCodeHash: binToHex(new Uint8Array(32)),
+      registryPk: binToHex(new Uint8Array(32)),
+      nftCategory: binToHex(CATEGORY),
+    });
+    const tracker = new CashScriptParcelTracker(new FakeProvider(utxos, rawTxs) as any, store);
 
     const history = await tracker.getParcelHistory(CONTRACT_ADDRESS);
 
