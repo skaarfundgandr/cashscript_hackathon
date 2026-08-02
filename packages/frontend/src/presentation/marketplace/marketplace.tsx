@@ -2,6 +2,8 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { Button } from '../../components/ui/button.js';
+import { useToast } from '../../components/ui/toast.js';
+import { storeOrder } from '../../infrastructure/order-storage.js';
 
 import {
   apply,
@@ -83,24 +85,18 @@ function ProductCard({ product, onOpen }: { product: MarketplaceProduct; onOpen:
   );
 }
 
-type Purchase = { orderId: string; accessToken: string };
-
 function ProductDetail({
   product,
-  purchase,
   onBack,
   onCategory,
   onBuy,
   isCheckoutLoading,
-  checkoutError,
 }: {
   product: MarketplaceProduct;
-  purchase: Purchase | null;
   onBack: () => void;
   onCategory: (category: string) => void;
   onBuy: () => void;
   isCheckoutLoading: boolean;
-  checkoutError: string | null;
 }) {
   const [selectedThumbnail, setSelectedThumbnail] = useState(0);
 
@@ -115,15 +111,15 @@ function ProductDetail({
       <header className="marketplace-topbar">
         <div className="marketplace-brand">{MERCHANT}</div>
         <nav className="marketplace-topnav" aria-label="Marketplace">
-          <a href="#orders">Orders</a><a href="#help">Help</a>
+          <a href="#help">Help</a>
         </nav>
       </header>
 
       <div className="marketplace-detail">
         <nav className="marketplace-crumbs" aria-label="Breadcrumb">
-          <a href="/marketplace" onClick={(event) => { event.preventDefault(); onBack(); }}>Catalogue</a>
+          <a href="#/shop" onClick={(event) => { event.preventDefault(); onBack(); }}>Catalogue</a>
           <span>/</span>
-          <a href={`/marketplace?category=${encodeURIComponent(product.category)}`} onClick={(event) => { event.preventDefault(); onCategory(product.category); }}>{product.category}</a>
+          <a href="#/shop" onClick={(event) => { event.preventDefault(); onCategory(product.category); }}>{product.category}</a>
           <span>/</span>
           <span className="marketplace-crumb-current">{product.name}</span>
         </nav>
@@ -170,13 +166,12 @@ function ProductDetail({
               <dt>Item ID</dt><dd>{product.id}</dd>
               <dt>Category</dt><dd>{product.category}</dd>
               <dt>Ships from</dt><dd>Makati City</dd>
-              <dt>Courier</dt><dd>Assigned at checkout</dd>
+              <dt>Courier</dt><dd>Assigned by merchant</dd>
             </dl>
             <div className="marketplace-detail-actions">
               <Button type="button" className="marketplace-buy-button" onClick={onBuy} disabled={isCheckoutLoading}>{isCheckoutLoading ? 'Placing order…' : 'Buy now'}</Button>
               <Button type="button" variant="outline" size="icon" aria-label="Save"><HeartIcon /></Button>
             </div>
-            {checkoutError && <p className="marketplace-checkout-error" role="alert">{checkoutError}</p>}
             <div className="marketplace-custody-note">
               <ShieldIcon aria-hidden="true" />
               <div>
@@ -184,21 +179,6 @@ function ProductDetail({
                 <p>Every handover is signed by the courier holding it, and the record is public. You get a delivery code only you can release.</p>
               </div>
             </div>
-            <AnimatePresence initial={false}>
-              {purchase && (
-                <motion.div
-                  className="marketplace-receipt"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
-                >
-                  <div><span>Order</span><strong>#{purchase.orderId}</strong></div>
-                  <div><span>Access token</span><strong>{purchase.accessToken}</strong></div>
-                  <div><span>Parcel</span><strong>minting…</strong></div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
         </div>
 
@@ -219,16 +199,28 @@ function ProductDetail({
   );
 }
 
-export function Marketplace() {
-  const [state, setState] = useState<MarketplaceState>(emptyState);
+export function Marketplace({
+  productId = null,
+  category = null,
+  onOpenProduct,
+  onCloseProduct = () => undefined,
+  onBrowseCategory = () => undefined,
+  onCheckout = () => undefined,
+}: {
+  productId?: string | null;
+  category?: string | null;
+  onOpenProduct: (productId: string) => void;
+  onCloseProduct?: () => void;
+  onBrowseCategory?: (category: string) => void;
+  onCheckout?: (orderId: string) => void;
+}) {
+  const [state, setState] = useState<MarketplaceState>(() => category ? { ...emptyState(), categories: new Set([category]) } : emptyState());
   const [filtersOpen, setFiltersOpen] = useState(true);
-  const [productId, setProductId] = useState(() => new URLSearchParams(window.location.search).get('product'));
   const [products, setProducts] = useState<MarketplaceProduct[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [productsError, setProductsError] = useState<string | null>(null);
-  const [purchase, setPurchase] = useState<Purchase | null>(null);
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
-  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const toast = useToast();
   const results = useMemo(() => apply(products, state), [products, state]);
   const categories = useMemo(() => categoriesOf(products), [products]);
   const chips = useMemo(() => getChips(state), [state]);
@@ -244,6 +236,9 @@ export function Marketplace() {
   };
 
   useEffect(() => { loadProducts(); }, []);
+  useEffect(() => {
+    setState((current) => ({ ...current, categories: category ? new Set([category]) : new Set() }));
+  }, [category]);
 
   const update = (changes: Partial<MarketplaceState>) => setState((current) => ({ ...current, ...changes }));
 
@@ -263,36 +258,28 @@ export function Marketplace() {
   };
 
   const openProduct = (nextProductId: string) => {
-    const url = new URL(window.location.href);
-    url.searchParams.set('product', nextProductId);
-    window.history.replaceState(null, '', url);
-    setProductId(nextProductId);
-    setPurchase(null);
-    setCheckoutError(null);
+    onOpenProduct(nextProductId);
     window.scrollTo(0, 0);
   };
 
   const closeProduct = () => {
-    const url = new URL(window.location.href);
-    url.searchParams.delete('product');
-    window.history.replaceState(null, '', url);
-    setProductId(null);
-    setPurchase(null);
-    setCheckoutError(null);
+    onCloseProduct();
   };
 
   const browseCategory = (category: string) => {
-    closeProduct();
-    setState((current) => ({ ...current, categories: new Set([category]) }));
+    onBrowseCategory(category);
   };
 
   const buyProduct = () => {
     if (!selectedProduct || isCheckoutLoading) return;
     setIsCheckoutLoading(true);
-    setCheckoutError(null);
     void shopApi.checkout(selectedProduct.id)
-      .then(setPurchase)
-      .catch((error: unknown) => setCheckoutError(error instanceof Error ? error.message : String(error)))
+      .then(({ orderId, accessToken }) => {
+        storeOrder(orderId, accessToken);
+        toast.success(`Order #${orderId} placed`, 'The merchant will approve it before dispatch.');
+        onCheckout(orderId);
+      })
+      .catch((error: unknown) => toast.error('Could not place order', error instanceof Error ? error.message : String(error)))
       .finally(() => setIsCheckoutLoading(false));
   };
 
@@ -300,12 +287,12 @@ export function Marketplace() {
     <div className="marketplace">
       <AnimatePresence mode="wait" initial={false}>
         {selectedProduct ? (
-          <ProductDetail key={selectedProduct.id} product={selectedProduct} purchase={purchase} onBack={closeProduct} onCategory={browseCategory} onBuy={buyProduct} isCheckoutLoading={isCheckoutLoading} checkoutError={checkoutError} />
+          <ProductDetail key={selectedProduct.id} product={selectedProduct} onBack={closeProduct} onCategory={browseCategory} onBuy={buyProduct} isCheckoutLoading={isCheckoutLoading} />
         ) : <motion.div key="catalogue" initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -18 }} transition={{ duration: 0.2, ease: 'easeOut' }}>
       <header className="marketplace-topbar">
         <div className="marketplace-brand">{MERCHANT}</div>
         <nav className="marketplace-topnav" aria-label="Marketplace">
-          <a href="#orders">Orders</a><a href="#help">Help</a>
+          <a href="#help">Help</a>
         </nav>
       </header>
 

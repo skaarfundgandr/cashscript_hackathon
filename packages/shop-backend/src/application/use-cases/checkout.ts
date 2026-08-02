@@ -1,6 +1,6 @@
 import { CustodyGateway, OrderRepository } from '../ports/index.js';
 import { Order } from '../../domain/index.js';
-import { BUYER, COURIERS, getCourier, getProduct } from '../../infrastructure/seed.js';
+import { BUYER, MERCHANT, getCourier, getProduct } from '../../infrastructure/seed.js';
 import { NotFoundError } from '../errors.js';
 
 export const ORDER_ID_ATTEMPTS = 50;
@@ -25,7 +25,9 @@ export class CheckoutUseCase {
       accessToken: randomHex(32),
       productId: product.id,
       buyerId: BUYER.id,
-      courierId: COURIERS[0]!.id,
+      merchantId: MERCHANT.id,
+      courierId: null,
+      status: 'pending',
       parcelId: null,
       contractAddress: null,
       mintTxid: null,
@@ -34,14 +36,6 @@ export class CheckoutUseCase {
       createdAt: Date.now(),
     };
     await this.orders.save(order);
-
-    // The order is already durable. A slow or failed mint must not lose it, so the failure is
-    // logged and the nulls stay — the frontend polls, and `retry-custody` is the escape hatch.
-    try {
-      await attachCustody(this.orders, this.custody, order);
-    } catch (err) {
-      console.error(`[shop] custody mint failed for order ${order.orderId}:`, err);
-    }
 
     return { orderId: order.orderId, accessToken: order.accessToken };
   }
@@ -56,10 +50,11 @@ export class CheckoutUseCase {
 }
 
 /**
- * Step 5 of checkout, shared with `retry-custody`: mint the parcel and attach it to the order.
- * Throws when the gateway fails — checkout swallows that, retry-custody turns it into a 502.
+ * The merchant's approval step (and its customer retry fallback) mints the parcel and attaches it
+ * to the order. The caller decides whether a gateway failure returns the order to pending or a 502.
  */
 export async function attachCustody(orders: OrderRepository, custody: CustodyGateway, order: Order): Promise<Order> {
+  if (!order.courierId) throw new NotFoundError(`Order ${order.orderId} has no assigned courier`);
   const courier = getCourier(order.courierId);
   if (!courier) throw new NotFoundError(`Unknown courier: ${order.courierId}`);
 

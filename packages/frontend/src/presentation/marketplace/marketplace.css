@@ -32,7 +32,7 @@
   --color-ring: hsl(var(--ring));
 }
 
-#marketplace-root { min-height: 100vh; }
+#root { min-height: 100vh; }
 
 .marketplace, .marketplace * { box-sizing: border-box; }
 .marketplace {

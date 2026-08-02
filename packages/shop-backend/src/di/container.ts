@@ -1,4 +1,4 @@
-import { CheckoutUseCase, GetOrderUseCase, RetryCustodyUseCase, RevealCodeUseCase } from '../application/use-cases/index.js';
+import { ApproveOrderUseCase, CheckoutUseCase, GetOrderUseCase, RetryCustodyUseCase, RevealCodeUseCase } from '../application/use-cases/index.js';
 import { HttpCustodyGateway } from '../infrastructure/http-custody-gateway.js';
 import { SqliteOrderRepository } from '../infrastructure/sqlite/order-repository.js';
 
@@ -9,6 +9,7 @@ const orders = new SqliteOrderRepository(SHOP_DB);
 const custody = new HttpCustodyGateway(CUSTODY_URL);
 
 export const container = {
+  approveOrder: new ApproveOrderUseCase(orders, custody),
   checkout: new CheckoutUseCase(orders, custody),
   getOrder: new GetOrderUseCase(orders, custody),
   revealCode: new RevealCodeUseCase(orders),

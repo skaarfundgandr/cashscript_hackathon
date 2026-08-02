@@ -1,0 +1,8 @@
+.toast-viewport { position: fixed; z-index: 100; right: 20px; bottom: 20px; display: grid; width: min(390px, calc(100vw - 40px)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.toast { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 14px 14px 14px 16px; border: 1px solid hsl(var(--border)); border-radius: 8px; background: hsl(var(--background)); box-shadow: 0 10px 30px hsl(var(--foreground) / .14); color: hsl(var(--foreground)); font: 400 14px/1.4 ui-sans-serif, system-ui, sans-serif; }
+.toast strong { display: block; font-weight: 650; }
+.toast p { margin: 3px 0 0; color: hsl(var(--muted-foreground)); }
+.toast button { width: 24px; height: 24px; flex: none; padding: 0; border: 0; border-radius: 4px; background: transparent; color: hsl(var(--muted-foreground)); font: 20px/1 ui-sans-serif, system-ui, sans-serif; cursor: pointer; }
+.toast button:hover { background: hsl(var(--accent)); color: hsl(var(--foreground)); }
+.toast-success { border-left: 4px solid #16a34a; }
+.toast-error { border-left: 4px solid #dc2626; }

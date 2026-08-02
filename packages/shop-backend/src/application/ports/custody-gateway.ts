@@ -7,12 +7,16 @@ import { Courier } from '../../domain/index.js';
  * 0x04 Delivered). It is typed as a number on purpose: the shop never interprets it, and an
  * unknown byte must reach the UI to be rendered, not throw here.
  *
- * There is no timestamp. The custody backend declares one and never populates it (B-2).
+ * `timestamp` and `actorLabel` are optional because the custody backend does not currently
+ * provide them for every deployment.
  */
 export interface CustodyHop {
   txid: string;
   state: number;
   custodian: string;
+  actorLabel?: string;
+  timestamp?: number;
+  blockHeight?: number;
 }
 
 export interface CustodyMint {

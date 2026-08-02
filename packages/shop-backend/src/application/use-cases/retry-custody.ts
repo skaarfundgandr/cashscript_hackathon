@@ -19,6 +19,9 @@ export class RetryCustodyUseCase {
     if (order.accessToken !== params.accessToken) {
       throw new ForbiddenError(`Invalid access token for order ${params.orderId}`);
     }
+    if (order.status !== 'approved') {
+      throw new ConflictError(`Order ${params.orderId} is waiting for merchant approval`);
+    }
     if (order.parcelId) {
       throw new ConflictError(`Order ${params.orderId} already has a parcel: ${order.parcelId}`);
     }

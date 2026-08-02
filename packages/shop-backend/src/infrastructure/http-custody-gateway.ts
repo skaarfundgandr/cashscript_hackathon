@@ -11,8 +11,8 @@ import { Courier } from '../domain/index.js';
  * because it holds only those two private keys.
  */
 const CUSTODY_KEY: Record<string, 'A' | 'B'> = {
-  'jnt-mgl': 'A',
-  'ninjavan-rey': 'B',
+  'e7021007-4a9d-4a9d-8d64-6e5b5361b1e9': 'A',
+  '4c3feec7-9be0-4b3e-a775-e107343990f8': 'B',
 };
 
 export class HttpCustodyGateway implements CustodyGateway {

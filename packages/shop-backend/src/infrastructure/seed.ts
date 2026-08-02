@@ -1,7 +1,8 @@
-import { Buyer, Courier, Product } from '../domain/index.js';
+import { Buyer, Courier, Merchant, Product } from '../domain/index.js';
 
 /** Products are seeded catalogue data; there is no admin surface in this demo. */
-export const MERCHANT_NAME = 'Northbay Supply';
+export const MERCHANT: Merchant = { id: '7eb7d7f5-4e43-4c0e-9c5e-5880dc48e5c1', name: 'Northbay Supply' };
+export const MERCHANT_NAME = MERCHANT.name;
 
 const svg = (body: string) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none" stroke="#737373" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`,
@@ -38,11 +39,17 @@ export const PRODUCTS: Product[] = [
 ];
 
 export const COURIERS: Courier[] = [
-  { id: 'jnt-mgl', name: 'Miguel Santos', company: 'J&T Express', pkh: '06afd46bcdfd22ef94ac122aa11f241244a37ecc' },
-  { id: 'ninjavan-rey', name: 'Rey Delgado', company: 'Ninja Van', pkh: '7dd65592d0ab2fe0d0257d571abf032cd9db93dc' },
+  { id: 'e7021007-4a9d-4a9d-8d64-6e5b5361b1e9', name: 'Miguel Santos', company: 'J&T Express', pkh: '06afd46bcdfd22ef94ac122aa11f241244a37ecc' },
+  { id: '4c3feec7-9be0-4b3e-a775-e107343990f8', name: 'Rey Delgado', company: 'Ninja Van', pkh: '7dd65592d0ab2fe0d0257d571abf032cd9db93dc' },
 ];
 
-export const BUYER: Buyer = { id: 'buyer-ana', name: 'Ana Reyes', address: '14 Mabini Street, Barangay Poblacion, Makati City 1210' };
+export const BUYER: Buyer = {
+  id: 'd8f98926-47b2-49d9-b329-784da4a12e70',
+  name: 'Ana Reyes',
+  address: '14 Mabini Street, Barangay Poblacion, Makati City 1210',
+  // The recipient fixture key. The terminal custody hop belongs to the buyer, not a courier.
+  pkh: '4747e8746cddb33b0f7f95a90f89f89fb387cbb6',
+};
 
 export function getProduct(id: string): Product | undefined { return PRODUCTS.find((product) => product.id === id); }
 export function getCourier(id: string): Courier | undefined { return COURIERS.find((courier) => courier.id === id); }

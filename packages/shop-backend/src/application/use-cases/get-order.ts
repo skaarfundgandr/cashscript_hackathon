@@ -1,7 +1,8 @@
 import { CustodyGateway, CustodyHop, OrderRepository } from '../ports/index.js';
 import { Buyer, Courier, Order, Product } from '../../domain/index.js';
-import { getBuyer, getCourier, getProduct } from '../../infrastructure/seed.js';
+import { COURIERS, getBuyer, getCourier, getProduct } from '../../infrastructure/seed.js';
 import { NotFoundError } from '../errors.js';
+import { OrderStatus } from '../../domain/order.js';
 
 /** The buyer-facing order. `deliverySecret` is deliberately absent — only reveal-code returns it. */
 export interface OrderView {
@@ -9,7 +10,8 @@ export interface OrderView {
   createdAt: number;
   product: Product;
   buyer: Buyer;
-  courier: Courier;
+  courier: Courier | null;
+  status: OrderStatus;
 
   parcelId: string | null;
   contractAddress: string | null;
@@ -35,6 +37,11 @@ export class GetOrderUseCase {
     if (!order) throw new NotFoundError(`Unknown order: ${orderId}`);
     return toOrderView(this.custody, order);
   }
+
+  async executePending(): Promise<Array<OrderView>> {
+    const orders = await this.orders.findPending();
+    return Promise.all(orders.map((order) => toOrderView(this.custody, order)));
+  }
 }
 
 /**
@@ -47,8 +54,8 @@ export async function toOrderView(custody: CustodyGateway, order: Order): Promis
   if (!product) throw new NotFoundError(`Unknown product: ${order.productId}`);
   const buyer = getBuyer(order.buyerId);
   if (!buyer) throw new NotFoundError(`Unknown buyer: ${order.buyerId}`);
-  const courier = getCourier(order.courierId);
-  if (!courier) throw new NotFoundError(`Unknown courier: ${order.courierId}`);
+  const courier = order.courierId ? getCourier(order.courierId) ?? null : null;
+  if (order.courierId && !courier) throw new NotFoundError(`Unknown courier: ${order.courierId}`);
 
   let chain: Array<CustodyHop> = [];
   // No parcel means nothing was asked of custody, so nothing failed: `custodyAvailable` stays
@@ -57,7 +64,10 @@ export async function toOrderView(custody: CustodyGateway, order: Order): Promis
 
   if (order.parcelId) {
     try {
-      chain = await custody.getChain(order.parcelId);
+      chain = (await custody.getChain(order.parcelId)).map((hop) => ({
+        ...hop,
+        actorLabel: actorLabelFor(hop.custodian, buyer),
+      }));
     } catch (err) {
       console.error(`[shop] custody chain unreadable for order ${order.orderId}:`, err);
       custodyAvailable = false;
@@ -70,6 +80,7 @@ export async function toOrderView(custody: CustodyGateway, order: Order): Promis
     product,
     buyer,
     courier,
+    status: order.status,
     parcelId: order.parcelId,
     contractAddress: order.contractAddress,
     mintTxid: order.mintTxid,
@@ -77,4 +88,10 @@ export async function toOrderView(custody: CustodyGateway, order: Order): Promis
     custodyAvailable,
     revealedAt: order.revealedAt,
   };
+}
+
+function actorLabelFor(custodian: string, buyer: Buyer): string | undefined {
+  if (custodian === buyer.pkh) return buyer.name;
+  const courier = COURIERS.find((candidate) => candidate.pkh === custodian);
+  return courier ? `${courier.name} · ${courier.company}` : undefined;
 }

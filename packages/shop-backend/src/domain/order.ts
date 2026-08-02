@@ -1,17 +1,22 @@
 /**
- * An order carries no status field. The order's state is the custody chain's state, read through
- * the CustodyGateway on every request. A duplicated status column would drift out of sync with
- * the chain, which is the one thing this system claims cannot happen.
+ * Merchant processing is shop state; custody state is chain state. They deliberately remain
+ * separate: an order cannot have a custody state until a merchant has approved it for dispatch.
  *
  * `createdAt` and `revealedAt` are order metadata, not custody timestamps. They record what the
  * shop did. They never belong on a custody row — the chain knows no times (see B-2).
  */
+export type OrderStatus = 'pending' | 'processing' | 'approved';
+
 export interface Order {
   orderId: string;
   accessToken: string;
   productId: string;
   buyerId: string;
-  courierId: string;
+  merchantId: string;
+  /** Chosen by the merchant when approving the order, before custody is minted. */
+  courierId: string | null;
+  /** The merchant workflow. Only approved orders may receive a parcel. */
+  status: OrderStatus;
 
   /**
    * Custody attachment — null until the mint lands. The mint is the slowest, most failure-prone

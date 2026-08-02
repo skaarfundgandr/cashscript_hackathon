@@ -19,8 +19,10 @@ export const routes = new Elysia()
   .get('/shop/products/:id', ({ params }) => shopController.getProduct(params.id), {
     detail: { tags: ['Shop'], summary: 'One product' },
   })
+  .get('/shop/couriers', () => shopController.listCouriers(), {
+    detail: { tags: ['Merchant'], summary: 'List couriers available for assignment' },
+  })
   .post('/shop/checkout', async ({ body, set }) => {
-    // 201 whether or not the mint landed. A slow or failed chipnet mint must not lose the order.
     set.status = 201;
     return shopController.checkout(body);
   }, {
@@ -30,8 +32,15 @@ export const routes = new Elysia()
     detail: {
       tags: ['Shop'],
       summary: 'Place an order and mint its parcel',
-      description: 'THE INTEGRATION POINT. Returns 201 whether or not the mint landed — a failed mint leaves parcelId null and the order intact. Poll GET /shop/orders/:orderId, or call retry-custody.',
+      description: 'Creates a pending order. A merchant must approve it before custody is attached.',
     },
+  })
+  .get('/shop/orders/pending', () => shopController.listPendingOrders(), {
+    detail: { tags: ['Merchant'], summary: 'List merchant orders awaiting approval' },
+  })
+  .post('/shop/orders/:orderId/approve', ({ params, body }) => shopController.approveOrder(params.orderId, body), {
+    body: t.Object({ courierId: t.String() }),
+    detail: { tags: ['Merchant'], summary: 'Assign a courier, approve an order, and attach custody' },
   })
   .get('/shop/orders/:orderId', async ({ params }) => shopController.getOrder(params.orderId), {
     detail: {
