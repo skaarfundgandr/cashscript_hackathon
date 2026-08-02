@@ -8,3 +8,4 @@ artifacts/
 *.db-wal
 .DS_Store
 .opencode/
+.codegraph/
