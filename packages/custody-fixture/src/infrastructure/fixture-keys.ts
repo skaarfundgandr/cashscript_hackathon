@@ -12,11 +12,15 @@ function pkhOfPrivateKey(privateKeyHex: string): string {
 
 const KEY = (n: number) => `${'0'.repeat(63)}${n}`;
 
-export const MERCHANT_KEY = KEY(1);
-export const COURIER_A_KEY = KEY(2);
-export const COURIER_B_KEY = KEY(3);
-export const REGISTRY_KEY = KEY(4);
-export const RECIPIENT_KEY = KEY(5);
+function envKey(envVar: string, fallback: string): string {
+  return process.env[envVar] ?? fallback;
+}
+
+export const MERCHANT_KEY = envKey('MERCHANT_PRIVATE_KEY', KEY(1));
+export const COURIER_A_KEY = envKey('COURIER_A_PRIVATE_KEY', KEY(2));
+export const COURIER_B_KEY = envKey('COURIER_B_PRIVATE_KEY', KEY(3));
+export const REGISTRY_KEY = envKey('REGISTRY_PRIVATE_KEY', KEY(4));
+export const RECIPIENT_KEY = envKey('RECIPIENT_PRIVATE_KEY', KEY(5));
 
 export const MERCHANT_PKH = pkhOfPrivateKey(MERCHANT_KEY);
 export const COURIER_A_PKH = pkhOfPrivateKey(COURIER_A_KEY);
@@ -38,6 +42,8 @@ const EXPECTED: Record<string, string> = {
 };
 
 export function assertFixturePkhs(): void {
+  if (process.env.MERCHANT_PRIVATE_KEY) return;
+
   const derived: Record<string, string> = {
     merchant: MERCHANT_PKH,
     courierA: COURIER_A_PKH,

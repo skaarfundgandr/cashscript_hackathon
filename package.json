@@ -13,6 +13,7 @@
     "dev:shop": "bun run --filter '@parcel-tracker/shop-backend' dev",
     "dev:fixture": "bun run --filter '@parcel-tracker/shared' build && bun run --filter '@parcel-tracker/custody-fixture' dev",
     "dev:demo": "bun run dev:fixture & bun run dev:shop & bun run dev:frontend & wait",
+    "dev:chipnet": "bash scripts/dev-chipnet.sh",
     "deploy": "docker compose up --build",
     "build": "bun run --filter '*' build"
   },
