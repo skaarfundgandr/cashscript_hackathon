@@ -4,6 +4,9 @@ WORKDIR /app
 COPY package.json bun.lock ./
 COPY packages/shared/package.json packages/shared/package.json
 COPY packages/backend/package.json packages/backend/package.json
+COPY packages/frontend/package.json packages/frontend/package.json
+COPY packages/shop-backend/package.json packages/shop-backend/package.json
+COPY packages/custody-fixture/package.json packages/custody-fixture/package.json
 RUN bun install --frozen-lockfile
 
 COPY contracts/ contracts/

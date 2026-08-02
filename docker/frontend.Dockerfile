@@ -4,6 +4,9 @@ WORKDIR /app
 COPY package.json bun.lock ./
 COPY packages/shared/package.json packages/shared/package.json
 COPY packages/frontend/package.json packages/frontend/package.json
+COPY packages/backend/package.json packages/backend/package.json
+COPY packages/shop-backend/package.json packages/shop-backend/package.json
+COPY packages/custody-fixture/package.json packages/custody-fixture/package.json
 RUN bun install --frozen-lockfile
 
 COPY packages/shared/ packages/shared/
@@ -29,4 +32,4 @@ COPY --from=build /app/packages/frontend/index.html packages/frontend/index.html
 COPY package.json package.json
 
 EXPOSE 5173
-CMD ["bun", "run", "--filter", "@parcel-tracker/frontend", "preview", "--", "--host", "0.0.0.0"]
+CMD ["bun", "run", "--filter", "@parcel-tracker/frontend", "preview", "--", "--host", "0.0.0.0", "--port", "5173"]

@@ -4,3 +4,8 @@ node_modules
 .codegraph
 artifacts
 .opencode
+*.db
+*.db-shm
+*.db-wal
+.env
+.env.*
