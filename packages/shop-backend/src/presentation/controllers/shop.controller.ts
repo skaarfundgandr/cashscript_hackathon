@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { ApproveOrderUseCase, CheckoutResult, CheckoutUseCase, GetOrderUseCase, ListManifestUseCase, ManifestEntry, OrderView, RetryCustodyUseCase, RevealCodeResult, RevealCodeUseCase } from '../../application/use-cases/index.js';
+=======
+import { CheckoutResult, CheckoutUseCase, DispatchOrderUseCase, GetOrderUseCase, ListManifestUseCase, ManifestEntry, OrderView, RetryCustodyUseCase, RevealCodeResult, RevealCodeUseCase } from '../../application/use-cases/index.js';
+>>>>>>> 932c435 (feat: separate order dispatch from checkout, allowing merchant to assign courier post-checkout)
 import { NotFoundError } from '../../application/errors.js';
 import { Courier, Product } from '../../domain/index.js';
 import { COURIERS, getProduct, PRODUCTS } from '../../infrastructure/seed.js';
@@ -6,6 +10,7 @@ import { COURIERS, getProduct, PRODUCTS } from '../../infrastructure/seed.js';
 export interface ShopControllerDeps {
   approveOrder: ApproveOrderUseCase;
   checkout: CheckoutUseCase;
+  dispatchOrder: DispatchOrderUseCase;
   getOrder: GetOrderUseCase;
   listManifest: ListManifestUseCase;
   revealCode: RevealCodeUseCase;
@@ -31,6 +36,10 @@ export class ShopController {
 
   checkout(body: { productId: string }): Promise<CheckoutResult> {
     return this.deps.checkout.execute({ productId: body.productId });
+  }
+
+  dispatchOrder(orderId: string, body: { accessToken: string; courierId: string }): Promise<OrderView> {
+    return this.deps.dispatchOrder.execute({ orderId, accessToken: body.accessToken, courierId: body.courierId });
   }
 
   getOrder(orderId: string): Promise<OrderView> {

@@ -20,7 +20,11 @@ export const routes = new Elysia()
     detail: { tags: ['Shop'], summary: 'One product' },
   })
   .get('/shop/couriers', () => shopController.listCouriers(), {
+<<<<<<< HEAD
     detail: { tags: ['Merchant'], summary: 'List couriers available for assignment' },
+=======
+    detail: { tags: ['Shop'], summary: 'List couriers available for dispatch' },
+>>>>>>> 932c435 (feat: separate order dispatch from checkout, allowing merchant to assign courier post-checkout)
   })
   .post('/shop/checkout', async ({ body, set }) => {
     set.status = 201;
@@ -31,8 +35,24 @@ export const routes = new Elysia()
     }),
     detail: {
       tags: ['Shop'],
+<<<<<<< HEAD
       summary: 'Place an order and mint its parcel',
       description: 'Creates a pending order. A merchant must approve it before custody is attached.',
+=======
+      summary: 'Place an unassigned order',
+      description: 'Persists the buyer\'s order without choosing a courier or minting a parcel. Dispatch is a separate merchant action.',
+    },
+  })
+  .post('/shop/orders/:orderId/dispatch', async ({ params, body }) => shopController.dispatchOrder(params.orderId, body), {
+    body: t.Object({
+      accessToken: t.String(),
+      courierId: t.String(),
+    }),
+    detail: {
+      tags: ['Shop'],
+      summary: 'Assign a courier and mint the parcel',
+      description: 'The custody integration point. Assignment is persisted before minting; if custody is unavailable, retry-custody can re-attempt the mint without changing courier.',
+>>>>>>> 932c435 (feat: separate order dispatch from checkout, allowing merchant to assign courier post-checkout)
     },
   })
   .get('/shop/orders/pending', () => shopController.listPendingOrders(), {
@@ -46,7 +66,7 @@ export const routes = new Elysia()
     detail: {
       tags: ['Shop'],
       summary: 'Every parcel the shop has minted',
-      description: 'The courier terminal\'s work list. Carries no state and no delivery secret — custody is the chain\'s to answer, and the terminal reads it per parcel. Not filtered by courier: the shop stamps courierId once at checkout and a handoff moves custody on chain, not here.',
+      description: 'The courier terminal\'s work list. Contains only dispatched orders whose parcels were minted. Carries no state and no delivery secret; the terminal reads custody from the chain.',
     },
   })
   .get('/shop/orders/:orderId', async ({ params }) => shopController.getOrder(params.orderId), {
@@ -73,6 +93,6 @@ export const routes = new Elysia()
     detail: {
       tags: ['Shop'],
       summary: 'Re-attempt the mint for an order with no parcel',
-      description: 'The escape hatch when a mint fails mid-demo. 409 if the order already has a parcel, 502 if the custody gateway is still down.',
+      description: 'The escape hatch after dispatch assignment succeeds but minting fails. 409 for an unassigned order or one that already has a parcel; 502 if custody is still down.',
     },
   });

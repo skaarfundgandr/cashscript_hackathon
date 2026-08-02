@@ -20,6 +20,7 @@ export interface CheckoutResponse {
   accessToken: string;
 }
 
+<<<<<<< HEAD
 export interface ShopBuyer {
   id: string;
   name: string;
@@ -31,6 +32,13 @@ export interface ShopCourier {
   name: string;
   pkh: string;
   company: string;
+=======
+export interface ShopCourier {
+  id: string;
+  name: string;
+  company: string;
+  pkh: string;
+>>>>>>> 932c435 (feat: separate order dispatch from checkout, allowing merchant to assign courier post-checkout)
 }
 
 /**
@@ -46,7 +54,7 @@ export interface ManifestEntry {
   mintTxid: string | null;
   product: { id: string; name: string; imageUrl: string; priceCents: number; currency: string };
   buyer: { id: string; name: string; address: string };
-  assignedCourier: { id: string; name: string; company: string; pkh: string } | null;
+  assignedCourier: ShopCourier | null;
 }
 
 /** A hop as the custody service reports it, read straight from the chain. */
@@ -56,6 +64,7 @@ export interface ParcelChainEntry {
   custodian: string;
 }
 
+<<<<<<< HEAD
 /** A hop as the shop reports it, with the actor and timing it can resolve on the buyer's behalf. */
 export interface ShopCustodyHop {
   txid: string;
@@ -64,6 +73,20 @@ export interface ShopCustodyHop {
   actorLabel?: string;
   timestamp?: number;
   blockHeight?: number;
+=======
+export interface ShopOrderView {
+  orderId: string;
+  createdAt: number;
+  product: ShopProduct;
+  buyer: { id: string; name: string; address: string };
+  courier: ShopCourier | null;
+  parcelId: string | null;
+  contractAddress: string | null;
+  mintTxid: string | null;
+  chain: ParcelChainEntry[];
+  custodyAvailable: boolean;
+  revealedAt: number | null;
+>>>>>>> 932c435 (feat: separate order dispatch from checkout, allowing merchant to assign courier post-checkout)
 }
 
 export interface CreateParcelResponse {
@@ -180,11 +203,13 @@ export const shopApi = {
   getProducts: () => shopJson<ShopProduct[]>('/shop/products'),
   getCouriers: () => shopJson<ShopCourier[]>('/shop/couriers'),
   getManifest: () => shopJson<ManifestEntry[]>('/shop/manifest'),
+  getOrder: (orderId: string) => shopJson<ShopOrderView>(`/shop/orders/${encodeURIComponent(orderId)}`),
   checkout: (productId: string) => shopJson<CheckoutResponse>('/shop/checkout', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ productId }),
   }),
+<<<<<<< HEAD
   getOrder: (orderId: string) => shopJson<ShopOrder>(`/shop/orders/${encodeURIComponent(orderId)}`),
   getPendingOrders: () => shopJson<ShopOrder[]>('/shop/orders/pending'),
   approveOrder: (orderId: string, courierId: string) => shopJson<ShopOrder>(`/shop/orders/${encodeURIComponent(orderId)}/approve`, {
@@ -202,4 +227,14 @@ export const shopApi = {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ accessToken }),
   }),
+=======
+  dispatch: (orderId: string, accessToken: string, courierId: string) => shopJson<ShopOrderView>(
+    `/shop/orders/${encodeURIComponent(orderId)}/dispatch`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessToken, courierId }),
+    },
+  ),
+>>>>>>> 932c435 (feat: separate order dispatch from checkout, allowing merchant to assign courier post-checkout)
 };

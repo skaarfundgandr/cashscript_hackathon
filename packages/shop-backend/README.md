@@ -29,8 +29,10 @@ bun dev:shop                     # from the repo root
 |---|---|---|---|
 | `GET` | `/shop/products` | — | `Product[]` |
 | `GET` | `/shop/products/:id` | — | `Product` |
+| `GET` | `/shop/couriers` | — | `Courier[]` |
 | `POST` | `/shop/checkout` | `{ productId }` | `201 { orderId, accessToken }` |
 | `GET` | `/shop/orders/:orderId` | — | `OrderView` |
+| `POST` | `/shop/orders/:orderId/dispatch` | `{ accessToken, courierId }` | `OrderView` |
 | `POST` | `/shop/orders/:orderId/reveal-code` | `{ accessToken }` | `{ secret, revealedAt }` |
 | `POST` | `/shop/orders/:orderId/retry-custody` | `{ accessToken }` | `OrderView` |
 
@@ -38,14 +40,15 @@ bun dev:shop                     # from the repo root
 |---|---|
 | `404` | Unknown product or order |
 | `403` | `accessToken` mismatch |
-| `409` | `retry-custody` on an order that already has a parcel; `reveal-code` before custody is attached |
+| `409` | Dispatching an assigned order; retrying an unassigned/minted order; revealing before custody is attached |
 | `502` | The custody gateway failed on a call that requires it |
 
-Three properties are load-bearing:
+Four properties are load-bearing:
 
-- **Checkout is `201` either way.** A slow or failed mint leaves `parcelId` null and keeps the
-  order. The frontend polls `GET /shop/orders/:orderId` until it is non-null; `retry-custody` is
-  the manual escape hatch.
+- **Checkout does not dispatch.** It creates an order with `courier: null` and `parcelId: null`.
+  The merchant chooses a courier in a separate dispatch call.
+- **Dispatch persists assignment before minting.** A failed mint leaves the selected courier in
+  place with `parcelId: null`; `retry-custody` is the manual escape hatch.
 - **`GET /shop/orders/:orderId` never returns `502`.** A custody failure is reported as
   `custodyAvailable: false`, `chain: []`, and the order still renders.
 - **`deliverySecret` never appears in `OrderView`.** Only `reveal-code` returns it, only with a
@@ -63,11 +66,17 @@ custody's, not the shop's — in the demo they come from the courier's scanner.
 SHOP=http://localhost:3001
 CUSTODY=http://localhost:3002
 
-# checkout → order has a parcelId
+# checkout → order is durable but unassigned
 curl -s -X POST $SHOP/shop/checkout -H 'content-type: application/json' \
   -d '{"productId":"field-notebook-a5"}'
 #   → 201 {"orderId":"4471","accessToken":"…"}
 ORDER=4471; TOKEN=…
+
+curl -s $SHOP/shop/orders/$ORDER            # courier null, parcelId null, chain []
+
+# merchant dispatches to the initial courier → parcel is minted
+curl -s -X POST $SHOP/shop/orders/$ORDER/dispatch -H 'content-type: application/json' \
+  -d "{\"accessToken\":\"$TOKEN\",\"courierId\":\"jnt-mgl\"}"
 
 curl -s $SHOP/shop/orders/$ORDER            # parcelId, chain [0x00], courier Miguel Santos
 PARCEL=$(curl -s $SHOP/shop/orders/$ORDER | grep -o '"parcelId":"[^"]*"' | cut -d'"' -f4)
@@ -110,9 +119,11 @@ nowhere else. The fifth hop is also unreachable there: see **B-1** in `files/SHO
 
 - **Courier ids are arbitrary and seeded.** `A`/`B` are illustrative only. The seeded pkhs are
   `packages/backend`'s `COURIER_A` / `COURIER_B`, verified against its `fixtures.ts`.
-- **`deliverySecret` is `''` until the mint lands**, matching the spec's `NOT NULL` column. The
-  check for "no code yet" is always `parcelId === null`, never a test on the secret.
-- **`custodyAvailable` stays `true` when `parcelId` is null** — nothing was asked of custody, so
-  nothing failed. `parcelId: null` is what tells the frontend the mint is pending.
+- **`courierId === null` means awaiting dispatch.** A non-null courier with `parcelId === null`
+  means assignment succeeded but minting failed; only that second state can use `retry-custody`.
+- **`deliverySecret` is `''` until the mint lands**, matching the database's `NOT NULL` column.
+  The check for "no code yet" is always `parcelId === null`, never a test on the secret.
+- **`custodyAvailable` stays `true` when `parcelId` is null** — there is no chain read to fail.
+  Use `courierId`/`courier` to distinguish awaiting dispatch from a mint awaiting retry.
 - **No timestamps on custody hops** (B-2). `createdAt` and `revealedAt` belong to the order and are
   shop chrome only; putting them on a custody row would imply the chain knows a time it does not.

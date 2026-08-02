@@ -11,7 +11,10 @@ export interface OrderView {
   product: Product;
   buyer: Buyer;
   courier: Courier | null;
+<<<<<<< HEAD
   status: OrderStatus;
+=======
+>>>>>>> 932c435 (feat: separate order dispatch from checkout, allowing merchant to assign courier post-checkout)
 
   parcelId: string | null;
   contractAddress: string | null;

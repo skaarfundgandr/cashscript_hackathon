@@ -97,7 +97,7 @@ timestamp.
    ▲                  ▲                 ▲                        ▲                ▲
  created by        signed by         signed by                signed by      signed by the
  the shop             A                 B                        B           marketplace
- at checkout                                                                 + the buyer's
+ at dispatch                                                                 + the buyer's
                                                                                  code
 ```
 
@@ -117,7 +117,8 @@ The loop `0x00 → 0x01 → 0x00` repeats for every hop. Tonight's flow runs it 
 
   ① product page
      [ Buy now ]
-  ② ─── shop backend creates the parcel ───►   ★ THE INTEGRATION POINT
+  ② ─── shop backend saves an unassigned order
+  ②a ── merchant dispatches to Courier A and creates the parcel ──► ★ THE INTEGRATION POINT
   ③ order confirmation
      "Custody tracking enabled"
      contract · mint txid
@@ -186,13 +187,14 @@ The loop `0x00 → 0x01 → 0x00` repeats for every hop. Tonight's flow runs it 
 | # | User does | Screen shows |
 |---|---|---|
 | 1 | Opens `#/shop`, taps **Buy now** | One product. No cart, no checkout form |
-| 2 | — | The shop's backend creates the parcel. **This is the integration point** |
+| 2 | — | The shop's backend saves the order with no courier and no parcel |
+| 2a | Merchant dispatches the order | Courier A is assigned and the shop backend creates the parcel. **This is the integration point** |
 | 3 | — | `Order #4471 placed`, and beneath it a panel: *"Custody tracking enabled"* with the contract address and mint txid |
 | 4 | — | **Shipping label** panel with a QR — what the merchant prints and sticks on the box |
 | 5 | Taps **Track my order** | Goes to the my-order page |
 
-Courier A is assigned server-side. Nobody scans a courier identity to place an order — a real
-integration wouldn't work that way.
+Courier A is assigned by a separate server-side merchant action after checkout. The buyer does not
+choose logistics, and checkout does not silently guess a courier.
 
 Panel 3 is doing pitch work: it's the moment a viewer sees an ordinary shop gain a custody layer.
 

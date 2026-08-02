@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { ApproveOrderUseCase, CheckoutUseCase, GetOrderUseCase, ListManifestUseCase, RetryCustodyUseCase, RevealCodeUseCase } from '../application/use-cases/index.js';
+=======
+import { CheckoutUseCase, DispatchOrderUseCase, GetOrderUseCase, ListManifestUseCase, RetryCustodyUseCase, RevealCodeUseCase } from '../application/use-cases/index.js';
+>>>>>>> 932c435 (feat: separate order dispatch from checkout, allowing merchant to assign courier post-checkout)
 import { HttpCustodyGateway } from '../infrastructure/http-custody-gateway.js';
 import { SqliteOrderRepository } from '../infrastructure/sqlite/order-repository.js';
 
@@ -9,8 +13,13 @@ const orders = new SqliteOrderRepository(SHOP_DB);
 const custody = new HttpCustodyGateway(CUSTODY_URL);
 
 export const container = {
+<<<<<<< HEAD
   approveOrder: new ApproveOrderUseCase(orders, custody),
   checkout: new CheckoutUseCase(orders, custody),
+=======
+  checkout: new CheckoutUseCase(orders),
+  dispatchOrder: new DispatchOrderUseCase(orders, custody),
+>>>>>>> 932c435 (feat: separate order dispatch from checkout, allowing merchant to assign courier post-checkout)
   getOrder: new GetOrderUseCase(orders, custody),
   listManifest: new ListManifestUseCase(orders),
   revealCode: new RevealCodeUseCase(orders),

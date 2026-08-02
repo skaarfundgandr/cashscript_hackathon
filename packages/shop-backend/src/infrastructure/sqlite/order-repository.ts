@@ -10,9 +10,13 @@ interface OrderRow {
   access_token: string;
   product_id: string;
   buyer_id: string;
+<<<<<<< HEAD
   merchant_id: string;
   courier_id: string;
   status: OrderStatus;
+=======
+  courier_id: string | null;
+>>>>>>> 932c435 (feat: separate order dispatch from checkout, allowing merchant to assign courier post-checkout)
   parcel_id: string | null;
   contract_address: string | null;
   mint_txid: string | null;
@@ -27,9 +31,13 @@ CREATE TABLE IF NOT EXISTS orders (
   access_token      TEXT NOT NULL,
   product_id        TEXT NOT NULL,
   buyer_id          TEXT NOT NULL,
+<<<<<<< HEAD
   merchant_id       TEXT NOT NULL,
   courier_id        TEXT NOT NULL,
   status            TEXT NOT NULL DEFAULT 'approved',
+=======
+  courier_id        TEXT,
+>>>>>>> 932c435 (feat: separate order dispatch from checkout, allowing merchant to assign courier post-checkout)
   parcel_id         TEXT,
   contract_address  TEXT,
   mint_txid         TEXT,
@@ -53,9 +61,13 @@ export class SqliteOrderRepository implements OrderRepository {
     this.db.run('PRAGMA journal_mode = WAL');
     this.db.run('PRAGMA foreign_keys = ON');
     this.db.run(SCHEMA);
+<<<<<<< HEAD
     this.seedIdentities();
     this.migrateStatusColumn();
     this.migrateIdentityIds();
+=======
+    this.ensureNullableCourierId();
+>>>>>>> 932c435 (feat: separate order dispatch from checkout, allowing merchant to assign courier post-checkout)
   }
 
   async save(order: Order): Promise<void> {
@@ -103,6 +115,7 @@ export class SqliteOrderRepository implements OrderRepository {
     return row !== null;
   }
 
+<<<<<<< HEAD
   async transitionStatus(orderId: string, from: OrderStatus, to: OrderStatus): Promise<boolean> {
     const result = this.db.query('UPDATE orders SET status = $to WHERE order_id = $orderId AND status = $from').run({ $orderId: orderId, $from: from, $to: to });
     return result.changes === 1;
@@ -115,6 +128,15 @@ export class SqliteOrderRepository implements OrderRepository {
     });
   }
 
+=======
+  async assignCourier(orderId: string, courierId: string): Promise<boolean> {
+    const result = this.db
+      .query('UPDATE orders SET courier_id = $courierId WHERE order_id = $orderId AND courier_id IS NULL')
+      .run({ $orderId: orderId, $courierId: courierId });
+    return result.changes === 1;
+  }
+
+>>>>>>> 932c435 (feat: separate order dispatch from checkout, allowing merchant to assign courier post-checkout)
   async attachCustody(orderId: string, custody: CustodyAttachment): Promise<void> {
     this.db
       .query(
@@ -138,6 +160,7 @@ export class SqliteOrderRepository implements OrderRepository {
       .run({ $orderId: orderId, $revealedAt: revealedAt });
   }
 
+<<<<<<< HEAD
   private migrateStatusColumn(): void {
     const columns = this.db.query('PRAGMA table_info(orders)').all() as Array<{ name: string }>;
     if (!columns.some((column) => column.name === 'status')) {
@@ -170,6 +193,24 @@ export class SqliteOrderRepository implements OrderRepository {
     this.db.query("UPDATE orders SET courier_id = $courierId WHERE courier_id = 'jnt-mgl'").run({ $courierId: COURIERS[0]!.id });
     this.db.query("UPDATE orders SET courier_id = $courierId WHERE courier_id = 'ninjavan-rey'").run({ $courierId: COURIERS[1]!.id });
     this.db.query('UPDATE orders SET merchant_id = $merchantId WHERE merchant_id IS NULL OR merchant_id = \'\'').run({ $merchantId: MERCHANT.id });
+=======
+  /** Existing demo databases used a NOT NULL courier_id; rebuild once without losing orders. */
+  private ensureNullableCourierId(): void {
+    const columns = this.db.query('PRAGMA table_info(orders)').all() as Array<{ name: string; notnull: number }>;
+    const courierId = columns.find((column) => column.name === 'courier_id');
+    if (!courierId || courierId.notnull === 0) return;
+
+    this.db.transaction(() => {
+      this.db.run('ALTER TABLE orders RENAME TO orders_legacy');
+      this.db.run(SCHEMA);
+      this.db.run(`
+        INSERT INTO orders (order_id, access_token, product_id, buyer_id, courier_id, parcel_id, contract_address, mint_txid, delivery_secret, revealed_at, created_at)
+        SELECT order_id, access_token, product_id, buyer_id, courier_id, parcel_id, contract_address, mint_txid, delivery_secret, revealed_at, created_at
+          FROM orders_legacy
+      `);
+      this.db.run('DROP TABLE orders_legacy');
+    })();
+>>>>>>> 932c435 (feat: separate order dispatch from checkout, allowing merchant to assign courier post-checkout)
   }
 }
 

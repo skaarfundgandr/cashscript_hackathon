@@ -166,7 +166,11 @@ function ProductDetail({
               <dt>Item ID</dt><dd>{product.id}</dd>
               <dt>Category</dt><dd>{product.category}</dd>
               <dt>Ships from</dt><dd>Makati City</dd>
+<<<<<<< HEAD
               <dt>Courier</dt><dd>Assigned by merchant</dd>
+=======
+              <dt>Courier</dt><dd>Assigned by the merchant after checkout</dd>
+>>>>>>> 932c435 (feat: separate order dispatch from checkout, allowing merchant to assign courier post-checkout)
             </dl>
             <div className="marketplace-detail-actions">
               <Button type="button" className="marketplace-buy-button" onClick={onBuy} disabled={isCheckoutLoading}>{isCheckoutLoading ? 'Placing order…' : 'Buy now'}</Button>
@@ -179,6 +183,24 @@ function ProductDetail({
                 <p>Every handover is signed by the courier holding it, and the record is public. You get a delivery code only you can release.</p>
               </div>
             </div>
+<<<<<<< HEAD
+=======
+            <AnimatePresence initial={false}>
+              {purchase && (
+                <motion.div
+                  className="marketplace-receipt"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                >
+                  <div><span>Order</span><strong>#{purchase.orderId}</strong></div>
+                  <div><span>Access token</span><strong>{purchase.accessToken}</strong></div>
+                  <div><span>Dispatch</span><strong>awaiting courier assignment</strong></div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+>>>>>>> 932c435 (feat: separate order dispatch from checkout, allowing merchant to assign courier post-checkout)
           </div>
         </div>
 

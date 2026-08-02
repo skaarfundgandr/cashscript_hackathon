@@ -1,6 +1,10 @@
 import { CustodyGateway, OrderRepository } from '../ports/index.js';
 import { Order } from '../../domain/index.js';
+<<<<<<< HEAD
 import { BUYER, MERCHANT, getCourier, getProduct } from '../../infrastructure/seed.js';
+=======
+import { BUYER, getCourier, getProduct } from '../../infrastructure/seed.js';
+>>>>>>> 932c435 (feat: separate order dispatch from checkout, allowing merchant to assign courier post-checkout)
 import { NotFoundError } from '../errors.js';
 
 export const ORDER_ID_ATTEMPTS = 50;
@@ -11,10 +15,7 @@ export interface CheckoutResult {
 }
 
 export class CheckoutUseCase {
-  constructor(
-    private readonly orders: OrderRepository,
-    private readonly custody: CustodyGateway,
-  ) {}
+  constructor(private readonly orders: OrderRepository) {}
 
   async execute(params: { productId: string }): Promise<CheckoutResult> {
     const product = getProduct(params.productId);
@@ -25,9 +26,13 @@ export class CheckoutUseCase {
       accessToken: randomHex(32),
       productId: product.id,
       buyerId: BUYER.id,
+<<<<<<< HEAD
       merchantId: MERCHANT.id,
       courierId: null,
       status: 'pending',
+=======
+      courierId: null,
+>>>>>>> 932c435 (feat: separate order dispatch from checkout, allowing merchant to assign courier post-checkout)
       parcelId: null,
       contractAddress: null,
       mintTxid: null,
@@ -50,8 +55,12 @@ export class CheckoutUseCase {
 }
 
 /**
+<<<<<<< HEAD
  * The merchant's approval step (and its customer retry fallback) mints the parcel and attaches it
  * to the order. The caller decides whether a gateway failure returns the order to pending or a 502.
+=======
+ * Shared by dispatch and `retry-custody`: mint the parcel and attach it to an assigned order.
+>>>>>>> 932c435 (feat: separate order dispatch from checkout, allowing merchant to assign courier post-checkout)
  */
 export async function attachCustody(orders: OrderRepository, custody: CustodyGateway, order: Order): Promise<Order> {
   if (!order.courierId) throw new NotFoundError(`Order ${order.orderId} has no assigned courier`);

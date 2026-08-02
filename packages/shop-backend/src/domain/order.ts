@@ -12,11 +12,16 @@ export interface Order {
   accessToken: string;
   productId: string;
   buyerId: string;
+<<<<<<< HEAD
   merchantId: string;
   /** Chosen by the merchant when approving the order, before custody is minted. */
   courierId: string | null;
   /** The merchant workflow. Only approved orders may receive a parcel. */
   status: OrderStatus;
+=======
+  /** Null until the merchant explicitly dispatches the order. */
+  courierId: string | null;
+>>>>>>> 932c435 (feat: separate order dispatch from checkout, allowing merchant to assign courier post-checkout)
 
   /**
    * Custody attachment — null until the mint lands. The mint is the slowest, most failure-prone

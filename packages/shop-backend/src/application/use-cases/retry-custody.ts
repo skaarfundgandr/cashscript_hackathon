@@ -25,6 +25,9 @@ export class RetryCustodyUseCase {
     if (order.parcelId) {
       throw new ConflictError(`Order ${params.orderId} already has a parcel: ${order.parcelId}`);
     }
+    if (!order.courierId) {
+      throw new ConflictError(`Order ${params.orderId} has not been dispatched yet`);
+    }
 
     try {
       const attached = await attachCustody(this.orders, this.custody, order);

@@ -43,7 +43,8 @@ The shop is Northbay Supply's own e-commerce. It integrates custody; it does not
 | Courier ids | Arbitrary, seeded. `A`/`B` are illustrative only | `A`/`B` are a hard limit of `packages/backend`'s fixture keys, not a domain fact |
 | `A`/`B` translation | A config map inside `HttpCustodyGateway` | It is an infrastructure detail of one adapter. It does not belong on a domain entity |
 | Order status | **Derived from the custody chain. Never stored** | A duplicated status column drifts out of sync with the chain, which quietly undermines the entire pitch |
-| Custody attachment | `parcelId` / `contractAddress` / `mintTxid` are **nullable** | The mint is the slowest, most failure-prone call in the system. All-or-nothing checkout means the demo's most-clicked button fails in the least recoverable way |
+| Dispatch | Checkout creates an unassigned order; a separate merchant action chooses the initial courier | The buyer does not choose logistics, and parcel minting requires a real initial custodian |
+| Custody attachment | `parcelId` / `contractAddress` / `mintTxid` are **nullable** | Dispatch persists assignment before minting, so a failed custody call can be retried without losing either the order or courier choice |
 | Persistence | `bun:sqlite`, both packages | Zero install, survives `--watch` restarts and reboots mid-recording |
 | B-1 | Fixture serves `0x04` by default, `B1=throw` replays the real failure | B-1 is a backend bug, not a design fact. Hiding it in the fixture does not fix it — it just blocks Stage 4 from being built at all |
 
@@ -108,7 +109,7 @@ export interface Order {
   accessToken: string;       // 32 random bytes, hex. The buyer's only credential
   productId: string;
   buyerId: string;
-  courierId: string;         // the initial custodian
+  courierId: string | null;  // null until merchant dispatch; then the initial custodian
 
   // Custody attachment — null until the mint lands. See Checkout.
   parcelId: string | null;         // the contract address, verbatim
@@ -161,8 +162,10 @@ This is what earns the timeline real copy. `Accepted · Courier B` becomes:
 |---|---|---|---|
 | `GET` | `/shop/products` | — | `Product[]` |
 | `GET` | `/shop/products/:id` | — | `Product` |
+| `GET` | `/shop/couriers` | — | `Courier[]` |
 | `POST` | `/shop/checkout` | `{ productId }` | `{ orderId, accessToken }` |
 | `GET` | `/shop/orders/:orderId` | — | `OrderView` |
+| `POST` | `/shop/orders/:orderId/dispatch` | `{ accessToken, courierId }` | `OrderView` |
 | `POST` | `/shop/orders/:orderId/reveal-code` | `{ accessToken }` | `{ secret, revealedAt }` |
 | `POST` | `/shop/orders/:orderId/retry-custody` | `{ accessToken }` | `OrderView` |
 
@@ -174,7 +177,7 @@ export interface OrderView {
   createdAt: number;
   product: Product;
   buyer: Buyer;
-  courier: Courier;
+  courier: Courier | null;
 
   parcelId: string | null;
   contractAddress: string | null;
@@ -197,20 +200,25 @@ secret — per `FRONTEND-FLOW` step 18, the reveal time has to *stay* on screen.
 ```
 1. Resolve the product. 404 if unknown or missing.
 2. Generate orderId (4 digits, unique) and accessToken (32 random bytes, hex).
-3. Assign the first seeded courier.
-4. Write the order row with parcelId/contractAddress/mintTxid NULL.
-5. Attempt CustodyGateway.createParcel(courier) inline.
-   ├─ success → store parcelId, contractAddress, mintTxid, deliverySecret
-   └─ failure → log it, leave the nulls, keep the order
-6. Return { orderId, accessToken } — 201 either way.
+3. Write the order with courierId/parcelId/contractAddress/mintTxid NULL.
+4. Return { orderId, accessToken } — 201.
 ```
 
-Step 6 is the important one. A slow or failed chipnet mint must not lose the buyer's order. The
-order confirmation renders `Order #4471 placed` immediately and shows custody as pending; the
-frontend polls `GET /shop/orders/:orderId` until `parcelId` is non-null.
+### Dispatch
 
-`retry-custody` re-runs step 5 for an order whose `parcelId` is still null. It is the escape hatch
-when a mint fails mid-recording — without it, a failed mint means restarting the whole demo.
+```
+1. Validate order, accessToken and courierId.
+2. Atomically assign the courier only if courierId is still NULL.
+3. Attempt CustodyGateway.createParcel(courier).
+   ├─ success → store parcelId, contractAddress, mintTxid, deliverySecret
+   └─ failure → return 502, preserving the courier assignment for retry
+```
+
+Checkout never guesses a courier. The order confirmation renders `Order #4471 placed` immediately
+and shows that it is awaiting merchant dispatch.
+
+`retry-custody` re-runs dispatch step 3 only when `courierId` is non-null and `parcelId` is null.
+It cannot assign a courier; it only recovers a failed mint.
 
 ### `reveal-code`
 
@@ -230,7 +238,7 @@ Elysia's default error shape, with the status carrying the meaning:
 |---|---|
 | `404` | Unknown product or order |
 | `403` | `accessToken` mismatch |
-| `409` | `retry-custody` on an order that already has a parcel |
+| `409` | Dispatching an assigned order; retrying an unassigned order or one that already has a parcel |
 | `502` | The custody gateway failed on a call that requires it |
 
 `GET /shop/orders/:orderId` **never** returns `502`. A custody failure sets
@@ -479,7 +487,9 @@ is **verified correct**), `qr-payloads.ts`, `role-store.ts` and the `ParcelApi` 
 
 ## Verification
 
-This project authors no automated tests; verification is manual.
+Focused Bun tests cover checkout/dispatch separation, credential and courier validation,
+single-assignment behavior, and failed-mint retry recovery. The full cross-service custody sequence
+is also verified manually.
 
 1. **Swagger.** Both packages mount `@elysiajs/swagger`. `:3001/swagger` and `:3002/swagger` are
    clickable proof of every route.
@@ -490,7 +500,8 @@ This project authors no automated tests; verification is manual.
    package:
 
 ```
-checkout → order has a parcelId
+checkout → order has courier null and parcelId null
+dispatch      jnt-mgl                     → order has a parcelId; chain is 0x00
 handoff       jnt-mgl → ninjavan-rey     → chain is 0x00, 0x01
 accept-handoff ninjavan-rey              → chain is 0x00, 0x01, 0x00
 request-delivery ninjavan-rey            → … 0x02
@@ -506,9 +517,10 @@ GET /shop/orders/:id                     → five hops, courier names, no secret
 ## Exit criteria
 
 - [ ] `bun dev:fixture` and `bun dev:shop` start with **no other process running** and no chipnet.
-- [ ] `POST /shop/checkout` returns an order whose `parcelId` is populated.
-- [ ] With `custody-fixture` **stopped**, checkout still returns `201` and the order persists with
-      `parcelId: null`. `retry-custody` attaches it once the fixture is back.
+- [ ] `POST /shop/checkout` returns an order with `courier: null` and `parcelId: null`.
+- [ ] Dispatch selects the requested courier and mints the parcel exactly once.
+- [ ] With `custody-fixture` **stopped**, dispatch preserves the courier with `parcelId: null`.
+      `retry-custody` attaches it once the fixture is back.
 - [ ] `GET /shop/orders/:orderId` returns the custody chain, courier name and company, and
       **never** the delivery secret.
 - [ ] With `custody-fixture` stopped, `GET /shop/orders/:orderId` returns `200` with
@@ -532,7 +544,7 @@ packages/shop-backend/src/
       order-repository.ts
       custody-gateway.ts
     use-cases/
-      checkout.ts · get-order.ts · reveal-code.ts · retry-custody.ts
+      checkout.ts · dispatch-order.ts · get-order.ts · reveal-code.ts · retry-custody.ts
   infrastructure/
     sqlite/order-repository.ts
     http-custody-gateway.ts
