@@ -6,6 +6,7 @@ import './components/ui/toast.css';
 import './presentation/courier/courier.css';
 import './presentation/marketplace/marketplace.css';
 import './presentation/shop/shop.css';
+import './presentation/public/public.css';
 
 const root = document.querySelector<HTMLElement>('#root');
 

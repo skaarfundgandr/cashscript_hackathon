@@ -1,0 +1,321 @@
+/* The public parcel record (#/p/:parcelId) and its lookup landing page (#/p).
+   Tokens (--foreground, --border, --radius, …) come from marketplace.css :root. */
+
+:root {
+  --pv-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --pv-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* ═══ the ledger, in the shop's design system ═══════════════════════════════
+   Same shadcn new-york surface as the marketplace — sticky topbar, muted
+   sortbar, chips, cards on --radius. Numbered rows, a header row, mono hashes. */
+
+.pv, .pv * { box-sizing: border-box; }
+.pv {
+  min-height: 100vh;
+  color-scheme: light;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font: 400 14px/1.5 var(--pv-sans);
+  -webkit-font-smoothing: antialiased;
+}
+.pv button, .pv input { font-family: inherit; }
+
+.pv-topbar {
+  position: sticky; top: 0; z-index: 40;
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 32px;
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--background) / .88);
+  backdrop-filter: blur(8px);
+}
+.pv-brand { font-size: 15px; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; }
+.pv-brand-sub {
+  padding-left: 12px; border-left: 1px solid hsl(var(--border));
+  color: hsl(var(--muted-foreground)); font-size: 13px; white-space: nowrap;
+}
+.pv-topnav { display: flex; align-items: center; gap: 18px; margin-left: auto; }
+.pv-topnav a { color: hsl(var(--muted-foreground)); font-size: 14px; font-weight: 500; text-decoration: none; white-space: nowrap; }
+.pv-topnav a:hover { color: hsl(var(--foreground)); }
+
+.pv-search-field { position: relative; display: flex; flex: 1; }
+.pv-search-field > svg { position: absolute; top: 50%; left: 13px; z-index: 1; width: 16px; height: 16px; pointer-events: none; opacity: .5; transform: translateY(-50%); }
+.pv-input {
+  width: 100%; height: 40px;
+  padding: 0 12px 0 38px;
+  border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) - 2px);
+  background: #fff; color: hsl(var(--foreground));
+  font: inherit; font-size: 14.5px;
+  outline: none;
+  transition: box-shadow .15s, border-color .15s;
+}
+.pv-input::placeholder { color: hsl(var(--muted-foreground)); }
+.pv-input:focus { border-color: hsl(var(--ring)); box-shadow: 0 0 0 3px hsl(var(--ring) / .12); }
+/* Record-first: one container, no side rail. The chain starts within a screen of the top. */
+.pv-record { width: min(1000px, calc(100% - 48px)); margin: 0 auto; padding: 34px 0 150px; }
+
+.pv-dot { width: 8px; height: 8px; flex: none; border-radius: 999px; background: hsl(var(--muted-foreground)); }
+.pv-dot-00 { background: #16a34a; }
+.pv-dot-01 { background: #ca8a04; }
+.pv-dot-02 { background: #2563eb; }
+.pv-dot-04 { background: #047857; }
+
+.pv-head { margin-bottom: 18px; }
+.pv-eyebrow { margin: 0 0 10px; color: hsl(var(--muted-foreground)); font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+.pv-head-row { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 10px 24px; }
+.pv-head-row h1 {
+  display: inline-flex; align-items: baseline; gap: 11px;
+  margin: 0;
+  font-size: clamp(26px, 3.4vw, 34px); font-weight: 600;
+  letter-spacing: -.03em; line-height: 1.1;
+}
+.pv-head-row h1 .pv-dot { width: 11px; height: 11px; align-self: center; }
+.pv-head-id {
+  display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%;
+  color: hsl(var(--muted-foreground));
+  font: 400 12.5px/1.5 var(--pv-mono);
+  overflow-wrap: anywhere; text-decoration: none;
+}
+.pv-head-id svg { width: 12px; height: 12px; flex: none; opacity: .6; }
+.pv-head-id:hover { color: hsl(var(--foreground)); }
+
+/* State pills: a filter that also reads as a legend and a summary of the chain. */
+.pv-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.pv-pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 32px; padding: 0 11px;
+  border: 1px solid hsl(var(--border)); border-radius: 999px;
+  background: hsl(var(--background)); color: hsl(var(--foreground));
+  font: 500 13px/1 var(--pv-sans);
+  cursor: pointer; transition: background .12s, border-color .12s;
+}
+.pv-pill:hover { background: hsl(var(--accent)); }
+.pv-pill[aria-pressed="true"] { border-color: hsl(var(--primary)); background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+.pv-pill-count {
+  display: grid; min-width: 19px; height: 19px; place-items: center;
+  padding: 0 5px; border-radius: 999px;
+  background: hsl(var(--muted)); color: hsl(var(--muted-foreground));
+  font-size: 11px; font-weight: 700;
+}
+.pv-pill[aria-pressed="true"] .pv-pill-count { background: hsl(var(--primary-foreground) / .22); color: hsl(var(--primary-foreground)); }
+
+.pv-card {
+  margin-bottom: 18px;
+  padding: 20px;
+  border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) + 4px);
+  background: hsl(var(--card));
+  box-shadow: 0 1px 2px rgb(0 0 0 / .05);
+}
+
+.pv-claim { display: flex; gap: 14px; }
+.pv-claim > svg { width: 20px; height: 20px; flex: none; margin-top: 1px; color: hsl(var(--foreground)); }
+.pv-claim strong { display: block; margin-bottom: 6px; font-size: 14.5px; font-weight: 600; }
+.pv-claim p { max-width: 68ch; margin: 0; color: hsl(var(--muted-foreground)); font-size: 13.5px; line-height: 1.6; }
+.pv-claim-muted { margin-top: 8px !important; padding-top: 8px; border-top: 1px dashed hsl(var(--border)); }
+
+.pv-facts h2, .pv-receipt h2 { margin: 0 0 14px; font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
+.pv-facts dl, .pv-receipt dl { display: grid; gap: 10px; margin: 0; }
+.pv-facts dl > div, .pv-receipt dl > div { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px; }
+.pv-facts dt, .pv-receipt dt { color: hsl(var(--muted-foreground)); font-size: 13.5px; }
+.pv-facts dd, .pv-receipt dd { min-width: 0; margin: 0; font-size: 13.5px; }
+.pv-receipt dd code { font: 400 12.5px/1.5 var(--pv-mono); }
+.pv-mono-link {
+  display: inline-flex; align-items: center; gap: 5px;
+  color: hsl(var(--foreground));
+  font: 400 12.5px/1.5 var(--pv-mono);
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.pv-mono-link svg { width: 12px; height: 12px; opacity: .55; }
+.pv-mono-link:hover { color: hsl(var(--muted-foreground)); }
+
+.pv-ledger { padding: 0; overflow: hidden; }
+
+/* The list's controls live inside the list's card, so they cannot be read as page-level search. */
+.pv-toolbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
+  padding: 12px 14px;
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--muted) / .6);
+}
+.pv-search-compact { flex: 1 1 260px; }
+.pv-search-compact .pv-input { height: 34px; font-size: 13.5px; }
+.pv-toolbar-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.pv-toolbar-controls > button { background: transparent; box-shadow: none; }
+.pv-toolbar-controls button[aria-pressed="true"] { background: hsl(var(--background)); box-shadow: 0 1px 2px rgb(0 0 0 / .06); font-weight: 600; }
+.pv-toolbar-divider { width: 1px; height: 18px; margin: 0 4px; background: hsl(var(--border)); }
+.pv-toolbar-count { margin-left: 6px; color: hsl(var(--muted-foreground)); font-size: 12.5px; white-space: nowrap; }
+/* Fixed track widths, not max-content: each row is its own grid container, so content-sized
+   tracks would size per-row and the columns would not line up. 200px clears the widest state
+   label ("Awaiting acceptance" + its 0x01) — a longer label would need this raised. */
+.pv-row {
+  display: grid;
+  grid-template-columns: 40px 200px minmax(0, 1fr) 178px;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+}
+.pv-row-head {
+  padding-top: 10px; padding-bottom: 10px;
+  border-bottom: 1px solid hsl(var(--border));
+  color: hsl(var(--muted-foreground));
+  font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+}
+.pv-row-group + .pv-row-group { border-top: 1px solid hsl(var(--border)); }
+.pv-index { color: hsl(var(--muted-foreground)); font: 400 13px/1 var(--pv-mono); }
+.pv-state { display: flex; align-items: center; gap: 8px; }
+.pv-state small { color: hsl(var(--muted-foreground)); font: 400 11.5px/1 var(--pv-mono); }
+.pv-badge {
+  display: inline-flex; align-items: center; width: max-content;
+  padding: 4px 9px; border-radius: 999px;
+  background: hsl(var(--muted));
+  font-size: 12px; font-weight: 600; white-space: nowrap;
+}
+.pv-badge-00 { background: #e8f5ed; color: #166534; }
+.pv-badge-01 { background: #fff4d6; color: #854d0e; }
+.pv-badge-02 { background: #e8f0ff; color: #1d4ed8; }
+.pv-badge-04 { background: #047857; color: #fff; }
+
+/* flex-start, not center: when the name wraps to two lines a centred logo drifts down and reads
+   as belonging to the "signed by" line rather than to the courier it names. */
+.pv-actor { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
+.pv-logo {
+  width: 34px; height: 34px; flex: none; margin-top: 1px;
+  border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) - 2px);
+  background: hsl(var(--muted));
+  object-fit: contain;
+}
+.pv-logo-empty { display: grid; place-items: center; color: hsl(var(--muted-foreground)); font-size: 13px; }
+.pv-actor-text { display: grid; min-width: 0; gap: 2px; }
+.pv-actor-text strong { font-size: 14px; font-weight: 600; }
+.pv-actor-text em { color: hsl(var(--muted-foreground)); font-size: 12.5px; font-style: normal; line-height: 1.45; }
+.pv-actor-text code { color: hsl(var(--muted-foreground)); font: 400 11.5px/1.4 var(--pv-mono); }
+
+.pv-tx { display: grid; justify-items: end; gap: 6px; }
+.pv-tx a {
+  display: inline-flex; align-items: center; gap: 5px;
+  color: hsl(var(--foreground));
+  font: 400 12.5px/1.4 var(--pv-mono);
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.pv-tx a svg { width: 12px; height: 12px; opacity: .55; }
+.pv-tx a:hover { color: hsl(var(--muted-foreground)); }
+.pv-expand {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 0; border: 0; background: transparent;
+  color: hsl(var(--muted-foreground));
+  font-size: 12px; cursor: pointer;
+}
+.pv-expand svg { width: 13px; height: 13px; }
+.pv-expand:hover { color: hsl(var(--foreground)); }
+
+.pv-raw { padding: 16px 20px 18px 78px; border-top: 1px dashed hsl(var(--border)); background: hsl(var(--muted) / .55); }
+.pv-raw dl { display: grid; gap: 7px; margin: 0; }
+.pv-raw dl > div { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 14px; }
+.pv-raw dt { color: hsl(var(--muted-foreground)); font-size: 12.5px; }
+.pv-raw dd { min-width: 0; margin: 0; font: 400 12px/1.5 var(--pv-mono); overflow-wrap: anywhere; }
+.pv-raw > p { margin: 12px 0 0; color: hsl(var(--muted-foreground)); font-size: 12px; }
+
+.pv-empty { padding: 60px 0; color: hsl(var(--muted-foreground)); text-align: center; }
+
+/* Loading skeleton: the record in outline. Opacity pulse only, off under reduced motion. */
+.pv-skel {
+  display: block;
+  border-radius: 8px;
+  background: hsl(var(--muted));
+  animation: pv-skel-pulse 1.4s ease-in-out infinite;
+}
+@keyframes pv-skel-pulse { 50% { opacity: .55; } }
+@media (prefers-reduced-motion: reduce) { .pv-skel { animation: none; } }
+.pv-skel-eyebrow { width: 92px; height: 12px; margin-bottom: 12px; }
+.pv-skel-title { width: min(300px, 55%); height: 34px; margin-bottom: 20px; }
+.pv-skel-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.pv-skel-pill { width: 118px; height: 32px; border-radius: 999px; }
+.pv-skel-ledger { display: grid; gap: 14px; }
+.pv-skel-row { height: 46px; border-radius: 10px; }
+.pv-stale {
+  margin: 0 0 16px;
+  padding: 11px 14px;
+  border-radius: var(--radius);
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+  font-size: 13.5px;
+}
+
+/* ── #/p · the lookup landing page ──────────────────────────────────────── */
+
+.pv-lookup { width: min(680px, calc(100% - 40px)); margin: 0 auto; padding: 72px 0 150px; }
+.pv-lookup h1 { margin: 0 0 14px; font-size: clamp(28px, 4.4vw, 40px); font-weight: 600; letter-spacing: -.035em; line-height: 1.1; }
+.pv-lookup-lede { max-width: 56ch; margin: 0 0 30px; color: hsl(var(--muted-foreground)); font-size: 15px; line-height: 1.65; }
+.pv-lookup-card { padding: 22px; }
+.pv-lookup-label { display: block; margin-bottom: 9px; font-size: 13.5px; font-weight: 600; }
+.pv-lookup-row { display: flex; align-items: center; gap: 10px; }
+.pv-lookup-row .pv-search-field { flex: 1; }
+.pv-lookup-hint, .pv-lookup-error { margin: 11px 0 0; font-size: 12.5px; line-height: 1.55; }
+.pv-lookup-hint { color: hsl(var(--muted-foreground)); }
+.pv-lookup-error { color: #b91c1c; }
+.pv-lookup .pv-input[aria-invalid="true"] { border-color: #b91c1c; }
+.pv-lookup-privacy { margin: 26px 0 0; padding-top: 16px; border-top: 1px solid hsl(var(--border)); color: hsl(var(--muted-foreground)); font-size: 12.5px; }
+
+@media (max-width: 620px) {
+  /* The Button primitive is inline-flex, so stretching its wrapper is not enough. */
+  .pv-lookup-row { flex-direction: column; align-items: stretch; }
+  .pv-lookup-row button { width: 100%; }
+}
+
+.pv-foot {
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  margin-top: 26px; padding-top: 16px;
+  border-top: 1px solid hsl(var(--border));
+  color: hsl(var(--muted-foreground));
+  font-size: 12.5px;
+}
+
+/* ── responsive ─────────────────────────────────────────────────────────────
+   Three steps. 900: the gutters tighten. 720: the ledger stops being a table
+   and becomes stacked records — a four-column grid cannot survive a phone, and
+   squeezing it produces two-character hash columns. 560: chrome shrinks and
+   every label/value pair goes single-column. Nothing scrolls sideways at any
+   width; long hashes wrap rather than widen their container.               */
+
+@media (max-width: 900px) {
+  .pv-record { width: calc(100% - 40px); padding: 26px 0 150px; }
+  .pv-topbar { padding: 12px 20px; }
+  .pv-brand-sub { display: none; }
+  .pv-facts dl > div, .pv-receipt dl > div { grid-template-columns: 132px minmax(0, 1fr); gap: 12px; }
+}
+
+/* 860, not 720: below ~860 the four fixed tracks leave the custody column too narrow to hold a
+   courier name and its proof line without shredding them. Stack before it gets cramped. */
+@media (max-width: 860px) {
+  .pv-row { grid-template-columns: 30px minmax(0, 1fr); row-gap: 10px; padding: 16px; }
+  .pv-row-head { display: none; }
+  .pv-state, .pv-actor, .pv-tx { grid-column: 2; }
+  .pv-index { align-self: start; padding-top: 3px; }
+  /* flex, not grid-auto-flow: column — max-content columns cannot shrink, so a narrow
+     viewport would push the row sideways instead of wrapping. */
+  .pv-tx { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; min-width: 0; }
+  .pv-facts dl > div, .pv-receipt dl > div, .pv-raw dl > div { grid-template-columns: minmax(0, 1fr); gap: 3px; }
+  .pv-raw { padding: 14px 16px 16px; }
+  .pv-toolbar-count { width: 100%; margin-left: 0; }
+}
+
+@media (max-width: 560px) {
+  .pv-record { width: calc(100% - 32px); padding: 22px 0 130px; }
+  .pv-topbar { flex-wrap: wrap; gap: 4px 12px; padding: 11px 16px; }
+  .pv-topnav { margin-left: auto; }
+  .pv-topnav a { font-size: 13px; }
+  .pv-head-row h1 { font-size: 24px; }
+  .pv-head-id { font-size: 11.5px; }
+  .pv-pills { gap: 6px; }
+  .pv-pill { height: 30px; padding: 0 9px; font-size: 12.5px; }
+  .pv-toolbar { gap: 8px; padding: 10px; }
+  .pv-toolbar-controls { width: 100%; }
+  .pv-toolbar-divider { display: none; }
+  .pv-card:not(.pv-ledger) { padding: 16px; }
+  .pv-claim { gap: 11px; }
+  .pv-actor { gap: 10px; }
+  .pv-logo { width: 30px; height: 30px; }
+  .pv-lookup { width: calc(100% - 32px); padding: 48px 0 120px; }
+  .pv-lookup-card { padding: 18px; }
+  .pv-foot { flex-direction: column; gap: 6px; }
+}

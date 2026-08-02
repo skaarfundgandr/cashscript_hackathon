@@ -111,6 +111,7 @@ function ProductDetail({
       <header className="marketplace-topbar">
         <div className="marketplace-brand">{MERCHANT}</div>
         <nav className="marketplace-topnav" aria-label="Marketplace">
+          <a href="#/shop/orders">Orders</a>
           <a href="#help">Help</a>
         </nav>
       </header>
@@ -292,6 +293,7 @@ export function Marketplace({
       <header className="marketplace-topbar">
         <div className="marketplace-brand">{MERCHANT}</div>
         <nav className="marketplace-topnav" aria-label="Marketplace">
+          <a href="#/shop/orders">Orders</a>
           <a href="#help">Help</a>
         </nav>
       </header>

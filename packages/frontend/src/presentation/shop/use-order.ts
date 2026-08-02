@@ -4,6 +4,9 @@ import { shopApi, ShopApiError, type ShopOrder } from '../../infrastructure/api-
 
 const POLL_INTERVAL_MS = 2_000;
 const ATTACH_TIMEOUT_MS = 30_000;
+/** Chain updates are courier-paced, not mint-paced — a slower tick is plenty. */
+const CHAIN_POLL_INTERVAL_MS = 5_000;
+const DELIVERED = 0x04;
 
 export function useOrder(orderId: string, accessToken: string | null) {
   const [order, setOrder] = useState<ShopOrder | null>(null);
@@ -26,17 +29,23 @@ export function useOrder(orderId: string, accessToken: string | null) {
         setError(null);
         setIsLoading(false);
 
-        if (nextOrder.status !== 'approved' || nextOrder.parcelId !== null) {
-          setTimedOut(false);
+        // Approved but unattached: the mint is in flight, poll fast and give up loudly.
+        if (nextOrder.status === 'approved' && nextOrder.parcelId === null) {
+          if (Date.now() - startedAt >= ATTACH_TIMEOUT_MS) {
+            setTimedOut(true);
+            return;
+          }
+          timer = window.setTimeout(() => void load(), POLL_INTERVAL_MS);
           return;
         }
 
-        if (Date.now() - startedAt >= ATTACH_TIMEOUT_MS) {
-          setTimedOut(true);
-          return;
+        setTimedOut(false);
+        // Everything else keeps a slow poll going until the chain is terminal, so the page
+        // follows the parcel on its own — approval landing, hops appearing, and the
+        // delivery-code section unlocking at 0x02 — without the buyer refreshing.
+        if (nextOrder.chain.at(-1)?.state !== DELIVERED) {
+          timer = window.setTimeout(() => void load(), CHAIN_POLL_INTERVAL_MS);
         }
-
-        timer = window.setTimeout(() => void load(), POLL_INTERVAL_MS);
       } catch (cause) {
         if (cancelled) return;
         setError(cause instanceof Error ? cause : new Error(String(cause)));

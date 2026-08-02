@@ -7,6 +7,7 @@ import { parcelViewFromOrder } from '../../domain/parcel.js';
 import { ShopApiError, shopApi } from '../../infrastructure/api-client.js';
 import { accessTokenForOrder } from '../../infrastructure/order-storage.js';
 import { OrderLoading, OrderNotFound, OrderProblem } from './order-page.js';
+import { PublicRecordLink } from './public-record-link.js';
 import { useOrder } from './use-order.js';
 
 export function MyOrderPage({ orderId, urlToken }: { orderId: string; urlToken: string | null }) {
@@ -46,17 +47,22 @@ export function MyOrderPage({ orderId, urlToken }: { orderId: string; urlToken: 
   return <main className="shop-page">
     <header className="shop-page-header"><p>My order</p><h1>Order #{order.orderId}</h1><span>{order.product.name}{currentParcelState(parcel) ? ` · ${currentParcelState(parcel)}` : ''}</span></header>
     <CustodyTimeline state="ready" parcel={parcel} />
-    {canReveal && <section className="shop-delivery-code">
+    {/* Always present once a parcel exists, so the buyer knows the code is coming. It unlocks
+        at 0x02 on its own — useOrder keeps polling the chain until the record is terminal. */}
+    {order.parcelId && <section className="shop-delivery-code">
       <p className="shop-eyebrow">Delivery code</p>
-      {revealed && order.parcelId ? <>
-        <div className="shop-delivery-code-content"><QrCode value={{ t: 'delivery', id: order.parcelId, secret: revealed.secret }} label="Delivery code QR" /><p>Revealed {formatTime(revealed.revealedAt)}</p></div>
-      </> : <>
-        {order.revealedAt !== null && <p>Revealed {formatTime(order.revealedAt)}. The code is not shown after a refresh.</p>}
-        {accessToken ? <button type="button" className="shop-button" onClick={() => void reveal()} disabled={isRevealing}>{isRevealing ? 'Revealing…' : order.revealedAt === null ? 'Reveal code' : 'Reveal code again'}</button>
-          : <p>Open this on the device you ordered from to reveal the delivery code.</p>}
+      {!canReveal ? <p>Your delivery code unlocks when the courier marks this parcel out for delivery. Keep this page open — it updates on its own.</p> : <>
+        {revealed ? <>
+          <div className="shop-delivery-code-content"><QrCode value={{ t: 'delivery', id: order.parcelId, secret: revealed.secret }} label="Delivery code QR" /><p>Revealed {formatTime(revealed.revealedAt)}</p></div>
+        </> : <>
+          {order.revealedAt !== null && <p>Revealed {formatTime(order.revealedAt)}. The code is not shown after a refresh.</p>}
+          {accessToken ? <button type="button" className="shop-button" onClick={() => void reveal()} disabled={isRevealing}>{isRevealing ? 'Revealing…' : order.revealedAt === null ? 'Reveal code' : 'Reveal code again'}</button>
+            : <p>Open this on the device you ordered from to reveal the delivery code.</p>}
+        </>}
+        <p className="shop-secret-warning">Anyone holding this code can confirm delivery. Show it only to the courier at your door.</p>
       </>}
-      <p className="shop-secret-warning">Anyone holding this code can confirm delivery. Show it only to the courier at your door.</p>
     </section>}
+    {order.parcelId && <PublicRecordLink parcelId={order.parcelId} />}
     {!accessToken && <p className="shop-recovery-note">Open this on the device you ordered from to manage your delivery code.</p>}
   </main>;
 }

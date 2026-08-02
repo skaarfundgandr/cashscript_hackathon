@@ -1,4 +1,4 @@
-import { ApproveOrderUseCase, CheckoutResult, CheckoutUseCase, DispatchOrderUseCase, GetOrderUseCase, ListManifestUseCase, ManifestEntry, OrderView, RetryCustodyUseCase, RevealCodeResult, RevealCodeUseCase } from '../../application/use-cases/index.js';
+import { ApproveOrderUseCase, CheckoutResult, CheckoutUseCase, DispatchOrderUseCase, GetOrderUseCase, GetPublicParcelUseCase, ListManifestUseCase, ManifestEntry, OrderView, PublicParcel, RetryCustodyUseCase, RevealCodeResult, RevealCodeUseCase } from '../../application/use-cases/index.js';
 import { NotFoundError } from '../../application/errors.js';
 import { Courier, Product } from '../../domain/index.js';
 import { COURIERS, getProduct, PRODUCTS } from '../../infrastructure/seed.js';
@@ -9,6 +9,7 @@ export interface ShopControllerDeps {
   dispatchOrder: DispatchOrderUseCase;
   getOrder: GetOrderUseCase;
   listManifest: ListManifestUseCase;
+  getPublicParcel: GetPublicParcelUseCase;
   revealCode: RevealCodeUseCase;
   retryCustody: RetryCustodyUseCase;
 }
@@ -44,6 +45,10 @@ export class ShopController {
 
   listPendingOrders(): Promise<Array<OrderView>> {
     return this.deps.getOrder.executePending();
+  }
+
+  getPublicParcel(parcelId: string): Promise<PublicParcel> {
+    return this.deps.getPublicParcel.execute(parcelId);
   }
 
   approveOrder(orderId: string, body: { courierId: string }): Promise<OrderView> {

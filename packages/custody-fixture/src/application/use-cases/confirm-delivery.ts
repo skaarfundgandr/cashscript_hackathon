@@ -28,7 +28,10 @@ export class ConfirmDeliveryUseCase {
     }
 
     const txid = fakeTxid();
-    await this.parcels.appendHop(contractId, { txid, state: ParcelState.Delivered, custodian: parcel.recipientPkh });
+    // The courier's pkh, not the recipient's: the covenant requires the 0x04 commitment to be
+    // `0x04 + tail`, i.e. it keeps the delivering courier. The recipient signs but is never
+    // named in the commitment, and the fixture must read the same as chipnet does.
+    await this.parcels.appendHop(contractId, { txid, state: ParcelState.Delivered, custodian: current.custodian });
     return txid;
   }
 }

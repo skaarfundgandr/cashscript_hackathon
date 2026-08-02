@@ -88,6 +88,13 @@ export interface ShopOrder {
   revealedAt: number | null;
 }
 
+export interface PublicParcel {
+  parcelId: string;
+  contractAddress: string;
+  mintTxid: string | null;
+  chain: ShopCustodyHop[];
+}
+
 export class ShopApiError extends Error {
   constructor(message: string, readonly status: number) {
     super(message);
@@ -187,6 +194,7 @@ export const shopApi = {
   }),
   getOrder: (orderId: string) => shopJson<ShopOrder>(`/shop/orders/${encodeURIComponent(orderId)}`),
   getPendingOrders: () => shopJson<ShopOrder[]>('/shop/orders/pending'),
+  getPublicParcel: (parcelId: string) => shopJson<PublicParcel>(`/shop/public/parcels/${encodeURIComponent(parcelId)}`),
   approveOrder: (orderId: string, courierId: string) => shopJson<ShopOrder>(`/shop/orders/${encodeURIComponent(orderId)}/approve`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

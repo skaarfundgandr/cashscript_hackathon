@@ -5,17 +5,22 @@ import { CourierApp } from './presentation/courier/courier.js';
 import { DemoRoleSwitcher } from './presentation/demo-role-switcher.js';
 import { Marketplace } from './presentation/marketplace/marketplace.js';
 import { MyOrderPage } from './presentation/shop/my-order-page.js';
+import { MyOrdersPage } from './presentation/shop/my-orders-page.js';
 import { MerchantOrdersPage } from './presentation/shop/merchant-orders-page.js';
 import { OrderPage } from './presentation/shop/order-page.js';
+import { PublicParcelPage } from './presentation/public/public-parcel-page.js';
+import { PublicLookup } from './presentation/public/public-lookup.js';
 
 type Route =
   | { kind: 'shop'; category: string | null }
   | { kind: 'product'; productId: string }
   | { kind: 'order'; orderId: string }
   | { kind: 'my-order'; orderId: string; token: string | null }
+  | { kind: 'my-orders' }
   | { kind: 'merchant-orders' }
   | { kind: 'courier' }
-  | { kind: 'public'; parcelId: string };
+  | { kind: 'public'; parcelId: string }
+  | { kind: 'public-lookup' };
 
 function routeFromHash(hash: string): Route | null {
   const [path, search = ''] = hash.replace(/^#/, '').split('?');
@@ -32,9 +37,11 @@ function routeFromHash(hash: string): Route | null {
   if (parts.length === 3 && parts[0] === 'shop' && parts[1] === 'my-order') {
     return { kind: 'my-order', orderId: parts[2]!, token: new URLSearchParams(search).get('t') };
   }
+  if (parts.length === 2 && parts[0] === 'shop' && parts[1] === 'orders') return { kind: 'my-orders' };
   if (parts.length === 2 && parts[0] === 'merchant' && parts[1] === 'orders') return { kind: 'merchant-orders' };
   if (parts.length === 1 && parts[0] === 'courier') return { kind: 'courier' };
   if (parts.length === 2 && parts[0] === 'p') return { kind: 'public', parcelId: parts[1]! };
+  if (parts.length === 1 && parts[0] === 'p') return { kind: 'public-lookup' };
   return null;
 }
 
@@ -69,7 +76,7 @@ export function Router() {
   const chooseRole = (nextRole: DemoRole) => {
     setDemoRole(nextRole);
     setRole(nextRole);
-    navigate(nextRole === 'buyer' ? '/shop' : '/merchant/orders');
+    navigate(nextRole === 'buyer' ? '/shop' : nextRole === 'merchant' ? '/merchant/orders' : '/courier');
   };
 
   if (route.kind === 'shop') return <RoleSurface role={role} onChooseRole={chooseRole}><Marketplace
@@ -88,13 +95,16 @@ export function Router() {
   }
   if (route.kind === 'order') return <RoleSurface role={role} onChooseRole={chooseRole}><OrderPage orderId={route.orderId} onTrackOrder={() => navigate(`/shop/my-order/${encodeURIComponent(route.orderId)}`)} /></RoleSurface>;
   if (route.kind === 'my-order') return <RoleSurface role={role} onChooseRole={chooseRole}><MyOrderPage orderId={route.orderId} urlToken={route.token} /></RoleSurface>;
+  if (route.kind === 'my-orders') return <RoleSurface role={role} onChooseRole={chooseRole}><MyOrdersPage onOpenOrder={(orderId) => navigate(`/shop/my-order/${encodeURIComponent(orderId)}`)} /></RoleSurface>;
   if (route.kind === 'merchant-orders') return <RoleSurface role={role} onChooseRole={chooseRole}><MerchantOrdersPage /></RoleSurface>;
-  if (route.kind === 'courier') return <CourierApp />;
-  return <Placeholder label={`Public parcel record · ${route.parcelId}`} />;
+  if (route.kind === 'courier') return <RoleSurface role={role} onChooseRole={chooseRole}><CourierApp /></RoleSurface>;
+  if (route.kind === 'public-lookup') return <PublicLookup onOpen={(parcelId) => navigate(`/p/${encodeURIComponent(parcelId)}`)} />;
+  return <PublicParcelPage parcelId={route.parcelId} />;
 }
 
 function roleForRoute(route: Route): DemoRole {
   if (route.kind === 'merchant-orders') return 'merchant';
+  if (route.kind === 'courier') return 'courier';
   return 'buyer';
 }
 

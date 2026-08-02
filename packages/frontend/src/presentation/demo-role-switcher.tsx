@@ -3,6 +3,7 @@ import type { DemoRole } from '../infrastructure/demo-role.js';
 const ROLE_LABELS: Record<DemoRole, string> = {
   buyer: 'Buyer',
   merchant: 'Merchant',
+  courier: 'Courier',
 };
 
 export function DemoRoleSwitcher({ role, onChange }: { role: DemoRole; onChange: (role: DemoRole) => void }) {

@@ -1,4 +1,4 @@
-import { ApproveOrderUseCase, CheckoutUseCase, DispatchOrderUseCase, GetOrderUseCase, ListManifestUseCase, RetryCustodyUseCase, RevealCodeUseCase } from '../application/use-cases/index.js';
+import { ApproveOrderUseCase, CheckoutUseCase, DispatchOrderUseCase, GetOrderUseCase, GetPublicParcelUseCase, ListManifestUseCase, RetryCustodyUseCase, RevealCodeUseCase } from '../application/use-cases/index.js';
 import { HttpCustodyGateway } from '../infrastructure/http-custody-gateway.js';
 import { SqliteOrderRepository } from '../infrastructure/sqlite/order-repository.js';
 
@@ -14,6 +14,7 @@ export const container = {
   dispatchOrder: new DispatchOrderUseCase(orders, custody),
   getOrder: new GetOrderUseCase(orders, custody),
   listManifest: new ListManifestUseCase(orders),
+  getPublicParcel: new GetPublicParcelUseCase(custody),
   revealCode: new RevealCodeUseCase(orders),
   retryCustody: new RetryCustodyUseCase(orders, custody),
 };

@@ -3,6 +3,7 @@ import { QrCode } from '../../components/custody/qr-code.js';
 import { useToast } from '../../components/ui/toast.js';
 import { accessTokenForOrder } from '../../infrastructure/order-storage.js';
 import { ShopApiError } from '../../infrastructure/api-client.js';
+import { PublicRecordLink } from './public-record-link.js';
 import { useOrder } from './use-order.js';
 
 export function OrderPage({ orderId, onTrackOrder }: { orderId: string; onTrackOrder: () => void }) {
@@ -49,13 +50,22 @@ export function OrderPage({ orderId, onTrackOrder }: { orderId: string; onTrackO
         <QrCode value={{ t: 'parcel', id: order.parcelId }} label="Shipping label QR code" />
         <div><p className="shop-eyebrow">Shipping label</p><h2>{order.product.name}</h2><p>Order #{order.orderId}</p><p className="shop-label-note">Scan this label to record each custody handover.</p></div>
       </section>
+      <PublicRecordLink parcelId={order.parcelId} />
       <button type="button" className="shop-button" onClick={onTrackOrder}>Track my order</button>
     </>}
   </main>;
 }
 
 export function OrderLoading() {
-  return <main className="shop-page"><div className="shop-loading" role="status">Loading order…</div></main>;
+  return <main className="shop-page" aria-busy="true">
+    <div className="shop-skeleton" role="status" aria-label="Loading order">
+      <span className="shop-skel shop-skel-eyebrow" />
+      <span className="shop-skel shop-skel-title" />
+      <span className="shop-skel shop-skel-sub" />
+      <span className="shop-skel shop-skel-panel" />
+      <span className="shop-skel shop-skel-panel shop-skel-panel-tall" />
+    </div>
+  </main>;
 }
 
 export function OrderNotFound() {

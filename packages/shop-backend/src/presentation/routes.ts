@@ -49,6 +49,13 @@ export const routes = new Elysia()
   .get('/shop/orders/pending', () => shopController.listPendingOrders(), {
     detail: { tags: ['Merchant'], summary: 'List merchant orders awaiting approval' },
   })
+  .get('/shop/public/parcels/:parcelId', ({ params }) => shopController.getPublicParcel(params.parcelId), {
+    detail: {
+      tags: ['Shop'],
+      summary: 'The public custody record for a parcel',
+      description: 'No auth, no buyer, no product, no secret — anyone holding the parcel address may read it. 404 if the address is unknown or its chain cannot be read.',
+    },
+  })
   .post('/shop/orders/:orderId/approve', ({ params, body }) => shopController.approveOrder(params.orderId, body), {
     body: t.Object({ courierId: t.String() }),
     detail: { tags: ['Merchant'], summary: 'Assign a courier, approve an order, and attach custody' },
