@@ -1,4 +1,4 @@
-import { ApproveOrderUseCase, CheckoutResult, CheckoutUseCase, GetOrderUseCase, OrderView, RetryCustodyUseCase, RevealCodeResult, RevealCodeUseCase } from '../../application/use-cases/index.js';
+import { ApproveOrderUseCase, CheckoutResult, CheckoutUseCase, GetOrderUseCase, ListManifestUseCase, ManifestEntry, OrderView, RetryCustodyUseCase, RevealCodeResult, RevealCodeUseCase } from '../../application/use-cases/index.js';
 import { NotFoundError } from '../../application/errors.js';
 import { Courier, Product } from '../../domain/index.js';
 import { COURIERS, getProduct, PRODUCTS } from '../../infrastructure/seed.js';
@@ -7,6 +7,7 @@ export interface ShopControllerDeps {
   approveOrder: ApproveOrderUseCase;
   checkout: CheckoutUseCase;
   getOrder: GetOrderUseCase;
+  listManifest: ListManifestUseCase;
   revealCode: RevealCodeUseCase;
   retryCustody: RetryCustodyUseCase;
 }
@@ -42,6 +43,10 @@ export class ShopController {
 
   approveOrder(orderId: string, body: { courierId: string }): Promise<OrderView> {
     return this.deps.approveOrder.execute(orderId, body.courierId);
+  }
+
+  listManifest(): Promise<Array<ManifestEntry>> {
+    return this.deps.listManifest.execute();
   }
 
   revealCode(orderId: string, body: { accessToken: string }): Promise<RevealCodeResult> {

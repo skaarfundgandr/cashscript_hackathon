@@ -42,6 +42,13 @@ export const routes = new Elysia()
     body: t.Object({ courierId: t.String() }),
     detail: { tags: ['Merchant'], summary: 'Assign a courier, approve an order, and attach custody' },
   })
+  .get('/shop/manifest', async () => shopController.listManifest(), {
+    detail: {
+      tags: ['Shop'],
+      summary: 'Every parcel the shop has minted',
+      description: 'The courier terminal\'s work list. Carries no state and no delivery secret — custody is the chain\'s to answer, and the terminal reads it per parcel. Not filtered by courier: the shop stamps courierId once at checkout and a handoff moves custody on chain, not here.',
+    },
+  })
   .get('/shop/orders/:orderId', async ({ params }) => shopController.getOrder(params.orderId), {
     detail: {
       tags: ['Shop'],

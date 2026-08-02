@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { ToastProvider } from './components/ui/toast.js';
 import { Router } from './router.js';
 import './components/ui/toast.css';
+import './presentation/courier/courier.css';
 import './presentation/marketplace/marketplace.css';
 import './presentation/shop/shop.css';
 

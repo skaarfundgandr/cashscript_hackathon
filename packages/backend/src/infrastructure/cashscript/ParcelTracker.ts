@@ -46,7 +46,14 @@ export class CashScriptParcelTracker implements IParcelContract {
   private loadArtifact(): Artifact {
     if (!this.artifact) {
       const artifactPath = path.resolve(import.meta.dirname, '../../../../../artifacts/ParcelTracker.json');
-      this.artifact = JSON.parse(fs.readFileSync(artifactPath, 'utf-8')) as Artifact;
+      const artifact = JSON.parse(fs.readFileSync(artifactPath, 'utf-8')) as Artifact;
+
+      // CashScript 0.13.2 misplaces compiler-injected parameter validation when it
+      // reconstructs multi-function contracts from debug metadata. TransactionBuilder
+      // then rejects valid transactions during its pre-broadcast local evaluation.
+      // Without this metadata it evaluates the exact compiled bytecode instead.
+      delete artifact.debug;
+      this.artifact = artifact;
     }
     return this.artifact;
   }
@@ -176,7 +183,11 @@ export class CashScriptParcelTracker implements IParcelContract {
     const nftUtxo = await this.findNftUtxo(contractId);
     const { custodian, reason } = decodeCommitment(hexToBin(nftUtxo.token.nft.commitment));
     const commitment = binToHex(encodeCommitment(ParcelState.Delivered, custodian, reason));
-    const recipientAddress = encodeCashAddress({ prefix: BCH_TEST_PREFIX, type: 'p2pkh', payload: recipientPkh }).address;
+    // `p2pkhWithTokens`, not `p2pkh`: delivery moves the NFT out of the covenant into the buyer's
+    // hands, and CashTokens refuses to send a token to an address that does not declare token
+    // support. Same payload and the same locking bytecode — only the cashaddr encoding differs, so
+    // the read path in `getParcelHistory` still finds this UTXO under its plain-p2pkh form.
+    const recipientAddress = encodeCashAddress({ prefix: BCH_TEST_PREFIX, type: 'p2pkhWithTokens', payload: recipientPkh }).address;
     return this.sendNftTransition(
       nftUtxo,
       unlocker,
@@ -210,7 +221,7 @@ export class CashScriptParcelTracker implements IParcelContract {
   }
 
   private async sendNftTransition(utxo: Utxo, unlocker: Unlocker, contract: ContractInstance<Artifact>, value: bigint, category: string, commitment: string, to: string, capability: 'mutable' | 'none'): Promise<string> {
-    const tx = await new TransactionBuilder({ provider: this.network })
+    const builder = new TransactionBuilder({ provider: this.network })
       .addInput(utxo, unlocker)
       .addOutput({
         to,
@@ -220,9 +231,20 @@ export class CashScriptParcelTracker implements IParcelContract {
           category,
           nft: { capability, commitment },
         },
-      })
-      .send();
-    return tx.txid;
+      });
+
+    /*
+     * Deliberately not `.send()`. In cashscript 0.13.2 `send()` pre-flights every standard-unlockable
+     * input through a local `debug()` evaluation (`TransactionBuilder.js:334`) and throws before it
+     * ever reaches the network. That evaluation returns a false negative for this covenant: it
+     * reports `ParcelTracker.cash:10 … OP_VERIFY`, while libauth's own VM runs the identical
+     * transaction to completion and chipnet accepts it. Broadcasting the built transaction skips
+     * the broken pre-flight.
+     *
+     * The cost is that a genuine script failure now surfaces as the node's rejection text rather
+     * than a line number. That is the honest trade: a real reason beats a fabricated one.
+     */
+    return this.network.sendRawTransaction(await builder.build());
   }
 
   private async sendFundingTx(contract: ContractInstance<Artifact>, fundingUtxo: Utxo, merchantAddress: string, merchantKey: Uint8Array, amount: bigint): Promise<string> {

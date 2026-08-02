@@ -11,6 +11,8 @@ export interface OrderRepository {
   save(order: Order): Promise<void>;
   findById(orderId: string): Promise<Order | null>;
   findPending(): Promise<Array<Order>>;
+  /** Every order whose mint landed, newest first. Orders still waiting on a parcel are excluded. */
+  listWithParcels(): Promise<Array<Order>>;
   exists(orderId: string): Promise<boolean>;
   /** Atomically moves an order through merchant processing. */
   transitionStatus(orderId: string, from: OrderStatus, to: OrderStatus): Promise<boolean>;

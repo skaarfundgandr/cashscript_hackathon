@@ -1,3 +1,4 @@
+const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 // Keep shop requests same-origin by default. Vite proxies this path during local
 // development, while deployments can provide an absolute API URL explicitly.
 const SHOP_BASE_URL = import.meta.env.VITE_SHOP_API_URL ?? '';
@@ -32,6 +33,30 @@ export interface ShopCourier {
   company: string;
 }
 
+/**
+ * One minted parcel from the shop's dispatch manifest. Carries no custody state on purpose — the
+ * courier terminal reads each chain itself, so what it shows is the chain's answer rather than a
+ * status column that could disagree with it.
+ */
+export interface ManifestEntry {
+  orderId: string;
+  createdAt: number;
+  parcelId: string;
+  contractAddress: string | null;
+  mintTxid: string | null;
+  product: { id: string; name: string; imageUrl: string; priceCents: number; currency: string };
+  buyer: { id: string; name: string; address: string };
+  assignedCourier: { id: string; name: string; company: string; pkh: string } | null;
+}
+
+/** A hop as the custody service reports it, read straight from the chain. */
+export interface ParcelChainEntry {
+  txid: string;
+  state: number;
+  custodian: string;
+}
+
+/** A hop as the shop reports it, with the actor and timing it can resolve on the buyer's behalf. */
 export interface ShopCustodyHop {
   txid: string;
   state: number;
@@ -39,6 +64,13 @@ export interface ShopCustodyHop {
   actorLabel?: string;
   timestamp?: number;
   blockHeight?: number;
+}
+
+export interface CreateParcelResponse {
+  contractId: string;
+  address: string;
+  txid: string;
+  deliverySecret: string;
 }
 
 export interface ShopOrder {
@@ -63,6 +95,76 @@ export class ShopApiError extends Error {
   }
 }
 
+/**
+ * A parcel id is a cashaddr and contains a colon. It is legal raw in a path segment (RFC 3986
+ * §3.3), but encoding is the safe side of that bet — `HttpCustodyGateway` takes the same view.
+ */
+const parcelPath = (parcelId: string) => `${BASE_URL}/parcel/${encodeURIComponent(parcelId)}`;
+
+/**
+ * The four transition routes return the txid as a bare `text/plain` string, not JSON — the
+ * controller's return type is `Promise<string>`. Reading it as JSON throws on a valid response, so
+ * the text is taken first and only parsed if it actually looks like a payload.
+ */
+async function readTxid(res: Response): Promise<{ txid: string }> {
+  const text = (await res.text()).trim();
+  if (text.startsWith('{')) {
+    try {
+      const body = JSON.parse(text) as { txid?: string };
+      if (typeof body.txid === 'string') return { txid: body.txid };
+    } catch {
+      // Fall through: an unparseable body is still more useful reported verbatim.
+    }
+  }
+  return { txid: text.replace(/^"|"$/g, '') };
+}
+
+async function post(url: string, body: unknown): Promise<{ txid: string }> {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return readTxid(res);
+}
+
+export class ApiClient {
+  async createParcel(courierId: string): Promise<CreateParcelResponse> {
+    const res = await fetch(`${BASE_URL}/parcel/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ courierId }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  handoff(parcelId: string, courierId: string, nextCourierId: string): Promise<{ txid: string }> {
+    return post(`${parcelPath(parcelId)}/handoff`, { courierId, nextCourierId });
+  }
+
+  acceptHandoff(parcelId: string, courierId: string): Promise<{ txid: string }> {
+    return post(`${parcelPath(parcelId)}/accept-handoff`, { courierId });
+  }
+
+  requestDelivery(parcelId: string, courierId: string): Promise<{ txid: string }> {
+    return post(`${parcelPath(parcelId)}/request-delivery`, { courierId });
+  }
+
+  confirmDelivery(parcelId: string, courierId: string, deliveryCode: string): Promise<{ txid: string }> {
+    return post(`${parcelPath(parcelId)}/confirm-delivery`, { courierId, deliveryCode });
+  }
+
+  async getParcel(parcelId: string): Promise<ParcelChainEntry[]> {
+    const res = await fetch(parcelPath(parcelId));
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+}
+
+export const apiClient = new ApiClient();
+
 async function shopJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${SHOP_BASE_URL}${path}`, init);
   if (response.ok) return response.json() as Promise<T>;
@@ -77,6 +179,7 @@ async function shopJson<T>(path: string, init?: RequestInit): Promise<T> {
 export const shopApi = {
   getProducts: () => shopJson<ShopProduct[]>('/shop/products'),
   getCouriers: () => shopJson<ShopCourier[]>('/shop/couriers'),
+  getManifest: () => shopJson<ManifestEntry[]>('/shop/manifest'),
   checkout: (productId: string) => shopJson<CheckoutResponse>('/shop/checkout', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

@@ -91,6 +91,13 @@ export class SqliteOrderRepository implements OrderRepository {
     return rows.map(toOrder);
   }
 
+  async listWithParcels(): Promise<Array<Order>> {
+    const rows = this.db
+      .query('SELECT * FROM orders WHERE parcel_id IS NOT NULL ORDER BY created_at DESC')
+      .all() as Array<OrderRow>;
+    return rows.map(toOrder);
+  }
+
   async exists(orderId: string): Promise<boolean> {
     const row = this.db.query('SELECT 1 FROM orders WHERE order_id = $orderId').get({ $orderId: orderId });
     return row !== null;

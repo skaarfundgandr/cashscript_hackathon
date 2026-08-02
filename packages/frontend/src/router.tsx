@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { setDemoRole, type DemoRole } from './infrastructure/demo-role.js';
+import { CourierApp } from './presentation/courier/courier.js';
 import { DemoRoleSwitcher } from './presentation/demo-role-switcher.js';
 import { Marketplace } from './presentation/marketplace/marketplace.js';
 import { MyOrderPage } from './presentation/shop/my-order-page.js';
@@ -88,7 +89,7 @@ export function Router() {
   if (route.kind === 'order') return <RoleSurface role={role} onChooseRole={chooseRole}><OrderPage orderId={route.orderId} onTrackOrder={() => navigate(`/shop/my-order/${encodeURIComponent(route.orderId)}`)} /></RoleSurface>;
   if (route.kind === 'my-order') return <RoleSurface role={role} onChooseRole={chooseRole}><MyOrderPage orderId={route.orderId} urlToken={route.token} /></RoleSurface>;
   if (route.kind === 'merchant-orders') return <RoleSurface role={role} onChooseRole={chooseRole}><MerchantOrdersPage /></RoleSurface>;
-  if (route.kind === 'courier') return <Placeholder label="Courier scanner · P4" />;
+  if (route.kind === 'courier') return <CourierApp />;
   return <Placeholder label={`Public parcel record · ${route.parcelId}`} />;
 }
 
