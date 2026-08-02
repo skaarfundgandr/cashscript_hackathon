@@ -14,14 +14,9 @@ export interface OrderRepository {
   /** Every order whose mint landed, newest first. Orders still waiting on a parcel are excluded. */
   listWithParcels(): Promise<Array<Order>>;
   exists(orderId: string): Promise<boolean>;
-<<<<<<< HEAD
   /** Atomically moves an order through merchant processing. */
   transitionStatus(orderId: string, from: OrderStatus, to: OrderStatus): Promise<boolean>;
   assignCourier(orderId: string, courierId: string | null): Promise<void>;
-=======
-  /** Assigns only an unassigned order. False means another dispatch won the race. */
-  assignCourier(orderId: string, courierId: string): Promise<boolean>;
->>>>>>> 932c435 (feat: separate order dispatch from checkout, allowing merchant to assign courier post-checkout)
   attachCustody(orderId: string, custody: CustodyAttachment): Promise<void>;
   /** Stamps the reveal time. Callers must only call this when `revealedAt` is still null. */
   markRevealed(orderId: string, revealedAt: number): Promise<void>;

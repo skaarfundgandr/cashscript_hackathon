@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-import { ApproveOrderUseCase, CheckoutResult, CheckoutUseCase, GetOrderUseCase, ListManifestUseCase, ManifestEntry, OrderView, RetryCustodyUseCase, RevealCodeResult, RevealCodeUseCase } from '../../application/use-cases/index.js';
-=======
-import { CheckoutResult, CheckoutUseCase, DispatchOrderUseCase, GetOrderUseCase, ListManifestUseCase, ManifestEntry, OrderView, RetryCustodyUseCase, RevealCodeResult, RevealCodeUseCase } from '../../application/use-cases/index.js';
->>>>>>> 932c435 (feat: separate order dispatch from checkout, allowing merchant to assign courier post-checkout)
+import { ApproveOrderUseCase, CheckoutResult, CheckoutUseCase, DispatchOrderUseCase, GetOrderUseCase, ListManifestUseCase, ManifestEntry, OrderView, RetryCustodyUseCase, RevealCodeResult, RevealCodeUseCase } from '../../application/use-cases/index.js';
 import { NotFoundError } from '../../application/errors.js';
 import { Courier, Product } from '../../domain/index.js';
 import { COURIERS, getProduct, PRODUCTS } from '../../infrastructure/seed.js';

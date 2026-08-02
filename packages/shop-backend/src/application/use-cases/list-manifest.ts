@@ -52,10 +52,7 @@ export class ListManifestUseCase {
         mintTxid: order.mintTxid,
         product,
         buyer,
-<<<<<<< HEAD
         // Null until a merchant approves the order and picks who carries it.
-=======
->>>>>>> 932c435 (feat: separate order dispatch from checkout, allowing merchant to assign courier post-checkout)
         assignedCourier: order.courierId ? getCourier(order.courierId) ?? null : null,
       }];
     });

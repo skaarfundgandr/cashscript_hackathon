@@ -20,11 +20,7 @@ export const routes = new Elysia()
     detail: { tags: ['Shop'], summary: 'One product' },
   })
   .get('/shop/couriers', () => shopController.listCouriers(), {
-<<<<<<< HEAD
     detail: { tags: ['Merchant'], summary: 'List couriers available for assignment' },
-=======
-    detail: { tags: ['Shop'], summary: 'List couriers available for dispatch' },
->>>>>>> 932c435 (feat: separate order dispatch from checkout, allowing merchant to assign courier post-checkout)
   })
   .post('/shop/checkout', async ({ body, set }) => {
     set.status = 201;
@@ -35,12 +31,8 @@ export const routes = new Elysia()
     }),
     detail: {
       tags: ['Shop'],
-<<<<<<< HEAD
-      summary: 'Place an order and mint its parcel',
-      description: 'Creates a pending order. A merchant must approve it before custody is attached.',
-=======
       summary: 'Place an unassigned order',
-      description: 'Persists the buyer\'s order without choosing a courier or minting a parcel. Dispatch is a separate merchant action.',
+      description: 'Creates a pending order. A merchant must approve it before custody is attached.',
     },
   })
   .post('/shop/orders/:orderId/dispatch', async ({ params, body }) => shopController.dispatchOrder(params.orderId, body), {
@@ -49,10 +41,9 @@ export const routes = new Elysia()
       courierId: t.String(),
     }),
     detail: {
-      tags: ['Shop'],
-      summary: 'Assign a courier and mint the parcel',
-      description: 'The custody integration point. Assignment is persisted before minting; if custody is unavailable, retry-custody can re-attempt the mint without changing courier.',
->>>>>>> 932c435 (feat: separate order dispatch from checkout, allowing merchant to assign courier post-checkout)
+      tags: ['Merchant'],
+      summary: 'Approve an order using its access token',
+      description: 'Compatibility dispatch path. It delegates to the same atomic approval and custody flow as the merchant approve endpoint.',
     },
   })
   .get('/shop/orders/pending', () => shopController.listPendingOrders(), {
