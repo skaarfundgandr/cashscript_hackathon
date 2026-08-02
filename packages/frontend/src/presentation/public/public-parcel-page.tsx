@@ -49,7 +49,7 @@ export function PublicParcelPage({ parcelId }: { parcelId: string }) {
 function PublicParcelSkeleton() {
   return <div className="pv">
     <header className="pv-topbar">
-      <div className="pv-brand">ParcelTracker</div>
+      <div className="pv-brand">Hermes</div>
       <span className="pv-brand-sub">Public custody record</span>
     </header>
     <main className="pv-record" role="status" aria-label="Loading parcel record" aria-busy="true">
@@ -70,7 +70,7 @@ function PublicParcelSkeleton() {
 function PublicParcelStatus({ children }: { children: ReactNode }) {
   return <div className="pv">
     <header className="pv-topbar">
-      <div className="pv-brand">ParcelTracker</div>
+      <div className="pv-brand">Hermes</div>
       <span className="pv-brand-sub">Public custody record</span>
     </header>
     <main className="pv-record">
@@ -130,7 +130,7 @@ function PublicParcelLedger({ parcel, isStale, checkedAt }: { parcel: PublicParc
 
   return <div className="pv">
     <header className="pv-topbar">
-      <div className="pv-brand">ParcelTracker</div>
+      <div className="pv-brand">Hermes</div>
       <span className="pv-brand-sub">Public custody record</span>
       <nav className="pv-topnav" aria-label="Public record">
         <a href={explorerAddress(parcel.contractAddress)} target="_blank" rel="noreferrer">Open on {NETWORK}</a>
@@ -289,7 +289,7 @@ function PublicParcelLedger({ parcel, isStale, checkedAt }: { parcel: PublicParc
       </motion.section>
 
       <motion.footer className="pv-foot" {...rise(delivered ? 0.26 : 0.22)}>
-        <span>{NETWORK} · ParcelTracker</span>
+        <span>{NETWORK} · Hermes</span>
         <span>Last checked {clockOf(checkedAt)}</span>
       </motion.footer>
     </main>

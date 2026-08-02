@@ -1,5 +1,5 @@
 {
-  "name": "@parcel-tracker/shared",
+  "name": "@hermes/shared",
   "version": "0.1.0",
   "main": "dist/index.js",
   "devDependencies": {

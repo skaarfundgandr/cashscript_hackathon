@@ -50,7 +50,7 @@ export function PublicLookup({ onOpen }: { onOpen: (parcelId: string) => void })
 
   return <div className="pv">
     <header className="pv-topbar">
-      <div className="pv-brand">ParcelTracker</div>
+      <div className="pv-brand">Hermes</div>
       <span className="pv-brand-sub">Public custody record</span>
     </header>
 

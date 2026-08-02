@@ -8,7 +8,7 @@ const app = new Elysia()
   .use(swagger({
     documentation: {
       info: {
-        title: 'ParcelTracker API',
+        title: 'Hermes API',
         version: '2.0.0',
         description: 'Custody attestation layer for e-commerce delivery on Bitcoin Cash',
       },

@@ -1,4 +1,4 @@
-export * from '@parcel-tracker/shared';
+export * from '@hermes/shared';
 
 /** One hop, in the exact shape `packages/backend` returns. No timestamp — it has none (B-2). */
 export interface CustodyHop {

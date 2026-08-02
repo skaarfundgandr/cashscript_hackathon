@@ -13,11 +13,11 @@ COPY packages/shared/ packages/shared/
 COPY packages/frontend/ packages/frontend/
 COPY tsconfig.base.json tsconfig.base.json
 
-RUN bun run --filter '@parcel-tracker/shared' build
+RUN bun run --filter '@hermes/shared' build
 
 ARG VITE_API_URL=http://localhost:3000
 ENV VITE_API_URL=$VITE_API_URL
-RUN bun run --filter '@parcel-tracker/frontend' build
+RUN bun run --filter '@hermes/frontend' build
 
 FROM oven/bun:1 AS runtime
 WORKDIR /app
@@ -32,4 +32,4 @@ COPY --from=build /app/packages/frontend/index.html packages/frontend/index.html
 COPY package.json package.json
 
 EXPOSE 5173
-CMD ["bun", "run", "--filter", "@parcel-tracker/frontend", "preview", "--", "--host", "0.0.0.0", "--port", "5173"]
+CMD ["bun", "run", "--filter", "@hermes/frontend", "preview", "--", "--host", "0.0.0.0", "--port", "5173"]

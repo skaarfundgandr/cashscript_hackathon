@@ -321,7 +321,7 @@ function Terminal({ courier, onSignOut }: { courier: CourierIdentity; onSignOut:
     <>
       <header className="c-top">
         <div className="c-brand">
-          <span className="c-brand-name">ParcelTracker</span>
+          <span className="c-brand-name">Hermes</span>
           <span className="c-brand-tag">Courier</span>
         </div>
         <div className="c-modes" role="tablist" aria-label="Terminal mode">

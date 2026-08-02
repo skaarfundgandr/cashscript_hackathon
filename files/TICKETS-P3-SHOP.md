@@ -105,7 +105,7 @@ this lands, Stage 3 of the flow is unreachable.
 ### Scope
 
 - `shopApi.getOrder(orderId)` → `GET /shop/orders/:orderId`, typed against the backend's `OrderView`
-- Order storage module over `localStorage`, key `parcel-tracker/orders`:
+- Order storage module over `localStorage`, key `hermes/orders`:
   `Record<orderId, { accessToken: string; createdAt: number }>`
 - **Buy now** writes the entry *before* navigating, then navigates to `#/shop/order/:orderId`
 - `#/shop/order/:orderId` renders a real shell: order number, product, buyer. No custody panel yet
@@ -126,7 +126,7 @@ this lands, Stage 3 of the flow is unreachable.
 ```bash
 bun run dev:demo
 # buy something; in devtools:
-JSON.parse(localStorage.getItem('parcel-tracker/orders'))
+JSON.parse(localStorage.getItem('hermes/orders'))
 # expect: { "<orderId>": { accessToken: "<64 hex>", createdAt: <ms> } }
 # hard-refresh the confirmation page — order still renders
 ```

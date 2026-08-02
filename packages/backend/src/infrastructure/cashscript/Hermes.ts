@@ -32,7 +32,7 @@ function assertDecodedTx(tx: TransactionCommon | string): TransactionCommon {
   return tx;
 }
 
-export class CashScriptParcelTracker implements IParcelContract {
+export class CashScriptHermes implements IParcelContract {
   private readonly network: ElectrumNetworkProvider;
   private artifact: Artifact | undefined;
   private readonly contracts: Map<string, CachedContract> = new Map();
@@ -45,7 +45,7 @@ export class CashScriptParcelTracker implements IParcelContract {
 
   private loadArtifact(): Artifact {
     if (!this.artifact) {
-      const artifactPath = path.resolve(import.meta.dirname, '../../../../../artifacts/ParcelTracker.json');
+      const artifactPath = path.resolve(import.meta.dirname, '../../../../../artifacts/Hermes.json');
       const artifact = JSON.parse(fs.readFileSync(artifactPath, 'utf-8')) as Artifact;
 
       // CashScript 0.13.2 misplaces compiler-injected parameter validation when it
@@ -237,7 +237,7 @@ export class CashScriptParcelTracker implements IParcelContract {
      * Deliberately not `.send()`. In cashscript 0.13.2 `send()` pre-flights every standard-unlockable
      * input through a local `debug()` evaluation (`TransactionBuilder.js:334`) and throws before it
      * ever reaches the network. That evaluation returns a false negative for this covenant: it
-     * reports `ParcelTracker.cash:10 … OP_VERIFY`, while libauth's own VM runs the identical
+     * reports `Hermes.cash:10 … OP_VERIFY`, while libauth's own VM runs the identical
      * transaction to completion and chipnet accepts it. Broadcasting the built transaction skips
      * the broken pre-flight.
      *

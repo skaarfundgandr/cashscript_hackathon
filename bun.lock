@@ -11,13 +11,13 @@
       },
     },
     "packages/backend": {
-      "name": "@parcel-tracker/backend",
+      "name": "@hermes/backend",
       "version": "0.1.0",
       "dependencies": {
         "@bitauth/libauth": "^3.0.0",
         "@elysiajs/cors": "^1.2.0",
         "@elysiajs/swagger": "^1.3.1",
-        "@parcel-tracker/shared": "workspace:*",
+        "@hermes/shared": "workspace:*",
         "cashscript": "^0.13.0",
         "elysia": "^1.2.0",
       },
@@ -27,13 +27,13 @@
       },
     },
     "packages/custody-fixture": {
-      "name": "@parcel-tracker/custody-fixture",
+      "name": "@hermes/custody-fixture",
       "version": "0.1.0",
       "dependencies": {
         "@bitauth/libauth": "^3.0.0",
         "@elysiajs/cors": "^1.2.0",
         "@elysiajs/swagger": "^1.3.1",
-        "@parcel-tracker/shared": "workspace:*",
+        "@hermes/shared": "workspace:*",
         "elysia": "^1.2.0",
       },
       "devDependencies": {
@@ -43,11 +43,11 @@
       },
     },
     "packages/frontend": {
-      "name": "@parcel-tracker/frontend",
+      "name": "@hermes/frontend",
       "version": "0.1.0",
       "dependencies": {
         "@bitauth/libauth": "^3.0.0",
-        "@parcel-tracker/shared": "workspace:*",
+        "@hermes/shared": "workspace:*",
         "@radix-ui/react-checkbox": "^1.3.11",
         "@radix-ui/react-radio-group": "^1.4.7",
         "@radix-ui/react-slot": "^1.3.3",
@@ -72,7 +72,7 @@
       },
     },
     "packages/shared": {
-      "name": "@parcel-tracker/shared",
+      "name": "@hermes/shared",
       "version": "0.1.0",
       "dependencies": {
         "@bitauth/libauth": "^3.0.0",
@@ -83,7 +83,7 @@
       },
     },
     "packages/shop-backend": {
-      "name": "@parcel-tracker/shop-backend",
+      "name": "@hermes/shop-backend",
       "version": "0.1.0",
       "dependencies": {
         "@elysiajs/cors": "^1.2.0",
@@ -166,6 +166,16 @@
 
     "@esbuild/win32-x64": ["@esbuild/win32-x64@0.25.12", "", { "os": "win32", "cpu": "x64" }, "sha512-alJC0uCZpTFrSL0CCDjcgleBXPnCrEAhTBILpeAp7M/OFgoqtAetfBzX0xM00MUsVVPpVjlPuMbREqnZCXaTnA=="],
 
+    "@hermes/backend": ["@hermes/backend@workspace:packages/backend"],
+
+    "@hermes/custody-fixture": ["@hermes/custody-fixture@workspace:packages/custody-fixture"],
+
+    "@hermes/frontend": ["@hermes/frontend@workspace:packages/frontend"],
+
+    "@hermes/shared": ["@hermes/shared@workspace:packages/shared"],
+
+    "@hermes/shop-backend": ["@hermes/shop-backend@workspace:packages/shop-backend"],
+
     "@jridgewell/gen-mapping": ["@jridgewell/gen-mapping@0.3.13", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.0", "@jridgewell/trace-mapping": "^0.3.24" } }, "sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA=="],
 
     "@jridgewell/remapping": ["@jridgewell/remapping@2.3.5", "", { "dependencies": { "@jridgewell/gen-mapping": "^0.3.5", "@jridgewell/trace-mapping": "^0.3.24" } }, "sha512-LI9u/+laYG4Ds1TDKSJW2YPrIlcVYOwi2fUC6xB43lueCjgxV4lffOCZCtYFiH6TNOX+tQKXx97T4IKHbhyHEQ=="],
@@ -177,16 +187,6 @@
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
     "@monsterbitar/isomorphic-ws": ["@monsterbitar/isomorphic-ws@5.3.1", "", { "peerDependencies": { "ws": "*" } }, "sha512-BWfWUffbg3uO4K6Cyokg9ff43lPaXAOZcCnNe1lcjCjUMDVrRAb5qEHG5qeJp3ud2SPYbORaNsls5as6SR3oig=="],
-
-    "@parcel-tracker/backend": ["@parcel-tracker/backend@workspace:packages/backend"],
-
-    "@parcel-tracker/custody-fixture": ["@parcel-tracker/custody-fixture@workspace:packages/custody-fixture"],
-
-    "@parcel-tracker/frontend": ["@parcel-tracker/frontend@workspace:packages/frontend"],
-
-    "@parcel-tracker/shared": ["@parcel-tracker/shared@workspace:packages/shared"],
-
-    "@parcel-tracker/shop-backend": ["@parcel-tracker/shop-backend@workspace:packages/shop-backend"],
 
     "@radix-ui/primitive": ["@radix-ui/primitive@1.1.7", "", {}, "sha512-rqWnm76nYT8HoNNqEjpgJ7Pw/DrBj5iBTrmEPo6HTX5+VJyBNOqTdv4g89G63HuR5g0AaENoAcH7Is5fF2kZ8Q=="],
 

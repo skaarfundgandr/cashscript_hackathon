@@ -23,7 +23,7 @@
 The product is an integration — *"merchants integrate this into systems they already run, one
 endpoint plus an embeddable tracking page."* A standalone admin form quietly contradicts that; a
 shop demonstrates it. It also gives the delivery code a truthful home: the buyer's own account,
-which is what `parcel-tracker-auth.md` §8 specifies, rather than a tokenised magic link.
+which is what `hermes-auth.md` §8 specifies, rather than a tokenised magic link.
 
 The shop is **thin**: one product page, an order confirmation, and a my-order page. No cart, no
 catalogue, no login, no payment.

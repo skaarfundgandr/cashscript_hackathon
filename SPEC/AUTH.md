@@ -1,9 +1,9 @@
-# Authentication — ParcelTracker
+# Authentication — Hermes
 
 > **Status: DEFERRED — post-hackathon feature.**
 > The demo ships without an auth layer. All signing uses fixture keypairs injected at startup.
 > This document records the target design so the feature can be picked up without re-deriving it.
-> Full specification: `files/parcel-tracker-auth.md`.
+> Full specification: `files/hermes-auth.md`.
 
 ---
 
@@ -71,7 +71,7 @@ POST /auth/verify { publicKey, challenge, signature }
 **Challenge format** (domain-bound, key-bound):
 
 ```
-ParcelTracker courier login
+Hermes courier login
 Domain: tracker.example.com
 Key: <publicKeyHash hex>
 Nonce: <32 random bytes, hex>
@@ -164,5 +164,5 @@ and never sign anything. Their factor at delivery is the hash-locked delivery se
 
 ## 5. Reference
 
-Full design with rationale, attack analysis, and trade-offs: `files/parcel-tracker-auth.md`.
-Integration surface and per-actor auth table: `files/parcel-tracker-v2.md` §9.
+Full design with rationale, attack analysis, and trade-offs: `files/hermes-auth.md`.
+Integration surface and per-actor auth table: `files/hermes-v2.md` §9.

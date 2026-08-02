@@ -1,5 +1,5 @@
 {
-  "name": "@parcel-tracker/shop-backend",
+  "name": "@hermes/shop-backend",
   "version": "0.1.0",
   "type": "module",
   "scripts": {

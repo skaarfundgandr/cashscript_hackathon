@@ -14,7 +14,7 @@ const app = new Elysia()
   .use(swagger({
     documentation: {
       info: {
-        title: 'ParcelTracker Custody Fixture',
+        title: 'Hermes Custody Fixture',
         version: '1.0.0',
         description: 'The six custody routes with identical shapes, faked over SQLite. No chain, no signatures, no chipnet. See DIVERGENCE.md for every point where this differs from packages/backend.',
       },

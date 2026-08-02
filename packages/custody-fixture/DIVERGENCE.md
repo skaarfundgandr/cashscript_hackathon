@@ -13,7 +13,7 @@ delayed fuse.
 | D-3 | No real signatures, no chain, no contract | Nothing here proves a transaction was valid. The delivery code is compared as plaintext; the real backend stores only its sha256 and the contract enforces it |
 | D-4 | Latency is 400–900 ms; chipnet is seconds | The shop's patience UI is untested against real timings. The mint is the slowest call in the system and this fixture makes it look fast |
 | D-5 | Parcel ids are shaped like chipnet addresses but are not valid cashaddrs | Anything that *validates* an address, rather than echoing it, will fail |
-| D-6 | Parcels survive a restart; the real backend's contract cache does not | `ParcelTracker.ts:215-221` throws `Unknown contract …; deploy the parcel in this process before transitioning it`. Against the real backend, a restart between the mint and a handoff kills the parcel — here it does not |
+| D-6 | Parcels survive a restart; the real backend's contract cache does not | `Hermes.ts:215-221` throws `Unknown contract …; deploy the parcel in this process before transitioning it`. Against the real backend, a restart between the mint and a handoff kills the parcel — here it does not |
 | D-7 | Known courier ids are pre-seeded with the backend's fixture keys | `A`, `B`, `jnt-mgl` and `ninjavan-rey` produce the real `COURIER_A` / `COURIER_B` pkhs so actor labels resolve. Any other id gets a freshly generated keypair whose pkh is in no identity table and will render as "Unknown actor" |
 | D-8 | Reads are not delayed; only the mint and the four transitions are | Polling feels snappier here than against chipnet |
 

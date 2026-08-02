@@ -34,7 +34,7 @@ export function SignIn({ onSignIn }: { onSignIn: (courier: CourierIdentity) => v
         <span />
       </div>
 
-      <p className="c-kicker">Parcel custody</p>
+      <p className="c-kicker">Hermes custody</p>
       <h1 className="c-signin-title">Courier<br />terminal</h1>
       <p className="c-signin-lede">
         Scan a box, sign a handover. Every action you take here is a signature recorded on chain

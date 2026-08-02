@@ -1,4 +1,4 @@
-# `@parcel-tracker/shop-backend` · :3001
+# `@hermes/shop-backend` · :3001
 
 Northbay Supply's own e-commerce backend. It owns **products, orders, the buyer, couriers and the
 delivery-code plaintext**. It does not own custody — it consumes `packages/backend` (or

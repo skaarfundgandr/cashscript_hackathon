@@ -1,10 +1,10 @@
 import { Database } from 'bun:sqlite';
 import { ElectrumNetworkProvider, Network } from 'cashscript';
 import { AcceptHandoffUseCase, ConfirmDeliveryUseCase, CreateParcelUseCase, GetParcelUseCase, HandoffUseCase, RequestDeliveryUseCase } from '../application/use-cases/index.js';
-import { CashScriptParcelTracker } from '../infrastructure/cashscript/ParcelTracker.js';
+import { CashScriptHermes } from '../infrastructure/cashscript/Hermes.js';
 import { SqliteContractStore } from '../infrastructure/memory/sqlite-contract-store.js';
 
-const db = new Database('parcel-tracker.db');
+const db = new Database('hermes.db');
 const store = new SqliteContractStore(db);
 
 // One persistent Electrum connection for the life of the process. The provider's default
@@ -14,7 +14,7 @@ const store = new SqliteContractStore(db);
 const provider = new ElectrumNetworkProvider(Network.CHIPNET, { manualConnectionManagement: true });
 await provider.connect();
 
-const parcelTracker = new CashScriptParcelTracker(provider, store);
+const parcelTracker = new CashScriptHermes(provider, store);
 
 export const container = {
   createParcel: new CreateParcelUseCase(parcelTracker),

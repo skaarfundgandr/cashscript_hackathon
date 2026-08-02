@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'parcel-tracker/orders';
+const STORAGE_KEY = 'hermes/orders';
 
 export interface StoredOrder {
   accessToken: string;

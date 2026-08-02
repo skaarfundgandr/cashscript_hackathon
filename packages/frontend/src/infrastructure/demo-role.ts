@@ -1,6 +1,6 @@
 export type DemoRole = 'buyer' | 'merchant' | 'courier';
 
-const STORAGE_KEY = 'parcel-tracker/demo-role';
+const STORAGE_KEY = 'hermes/demo-role';
 
 export function getDemoRole(): DemoRole {
   const role = window.sessionStorage.getItem(STORAGE_KEY);

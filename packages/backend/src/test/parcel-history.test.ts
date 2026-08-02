@@ -3,7 +3,7 @@ import { Database } from 'bun:sqlite';
 import { binToHex, encodeCashAddress, encodeTransactionBCH, hashTransaction, hexToBin } from '@bitauth/libauth';
 import type { Utxo } from 'cashscript';
 import { encodeCommitment } from '../domain/index.js';
-import { CashScriptParcelTracker } from '../infrastructure/cashscript/ParcelTracker.js';
+import { CashScriptHermes } from '../infrastructure/cashscript/Hermes.js';
 import { SqliteContractStore } from '../infrastructure/memory/sqlite-contract-store.js';
 
 const CONTRACT_ADDRESS = 'bchtest:contract';
@@ -94,11 +94,11 @@ class FakeProvider {
   }
 }
 
-function makeTracker(utxos: Map<string, Utxo[]>, rawTxs: Map<string, string>): CashScriptParcelTracker {
-  return new CashScriptParcelTracker(new FakeProvider(utxos, rawTxs) as any);
+function makeTracker(utxos: Map<string, Utxo[]>, rawTxs: Map<string, string>): CashScriptHermes {
+  return new CashScriptHermes(new FakeProvider(utxos, rawTxs) as any);
 }
 
-describe('CashScriptParcelTracker.getParcelHistory', () => {
+describe('CashScriptHermes.getParcelHistory', () => {
   it('returns entries oldest-first for NFT at contract address', async () => {
     const states: Array<ParcelHop> = [
       { state: 0, custodian: new Uint8Array(20).fill(1) },
@@ -171,7 +171,7 @@ describe('CashScriptParcelTracker.getParcelHistory', () => {
       registryPk: binToHex(new Uint8Array(32)),
       nftCategory: binToHex(CATEGORY),
     });
-    const tracker = new CashScriptParcelTracker(new FakeProvider(utxos, rawTxs) as any, store);
+    const tracker = new CashScriptHermes(new FakeProvider(utxos, rawTxs) as any, store);
 
     const history = await tracker.getParcelHistory(CONTRACT_ADDRESS);
 

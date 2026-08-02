@@ -1,5 +1,5 @@
 {
-  "name": "parcel-tracker",
+  "name": "hermes",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -8,10 +8,10 @@
   ],
   "scripts": {
     "compile": "bun run scripts/compile.ts",
-    "dev": "bun run --filter '@parcel-tracker/shared' build && bun run --filter '@parcel-tracker/backend' dev",
-    "dev:frontend": "bun run --filter '@parcel-tracker/shared' build && bun run --filter '@parcel-tracker/frontend' dev",
-    "dev:shop": "bun run --filter '@parcel-tracker/shop-backend' dev",
-    "dev:fixture": "bun run --filter '@parcel-tracker/shared' build && bun run --filter '@parcel-tracker/custody-fixture' dev",
+    "dev": "bun run --filter '@hermes/shared' build && bun run --filter '@hermes/backend' dev",
+    "dev:frontend": "bun run --filter '@hermes/shared' build && bun run --filter '@hermes/frontend' dev",
+    "dev:shop": "bun run --filter '@hermes/shop-backend' dev",
+    "dev:fixture": "bun run --filter '@hermes/shared' build && bun run --filter '@hermes/custody-fixture' dev",
     "dev:demo": "bun run dev:fixture & bun run dev:shop & bun run dev:frontend & wait",
     "dev:chipnet": "bash scripts/dev-chipnet.sh",
     "deploy": "docker compose up --build",

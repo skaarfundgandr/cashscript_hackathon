@@ -1,4 +1,4 @@
-import { generateDeliverySecret, hashDeliveryCode } from '@parcel-tracker/shared';
+import { generateDeliverySecret, hashDeliveryCode } from '@hermes/shared';
 
 export interface DeliverySecretResult {
   hash: Uint8Array;

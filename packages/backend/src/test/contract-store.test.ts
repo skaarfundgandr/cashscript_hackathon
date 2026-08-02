@@ -4,7 +4,7 @@ import { binToHex, hash160, hexToBin } from '@bitauth/libauth';
 import { Contract } from 'cashscript';
 import type { Artifact } from 'cashscript';
 import { derivePublicKey } from '../infrastructure/libauth/key-store.js';
-import { CashScriptParcelTracker } from '../infrastructure/cashscript/ParcelTracker.js';
+import { CashScriptHermes } from '../infrastructure/cashscript/Hermes.js';
 import { SqliteContractStore } from '../infrastructure/memory/sqlite-contract-store.js';
 
 function makeRecord(): {
@@ -65,20 +65,20 @@ function makeArtifact(): unknown {
       { name: 'deliveryCodeHash', type: 'bytes32' },
       { name: 'registryPk', type: 'bytes32' },
     ],
-    contractName: 'ParcelTracker',
+    contractName: 'Hermes',
     compiler: { name: 'cashc', version: '0.10.0' },
     source: '',
   };
 }
 
-describe('CashScriptParcelTracker rehydration', () => {
+describe('CashScriptHermes rehydration', () => {
   it('rehydrates a contract from the store on cache miss', () => {
     const store = new SqliteContractStore(new Database(':memory:'));
     const record = makeRecord();
     const artifact = makeArtifact() as Artifact;
     const contract = new Contract(artifact, [hexToBin(record.recipientPkh), hexToBin(record.merchantPkh), hexToBin(record.deliveryCodeHash), hexToBin(record.registryPk)], { provider: {} } as any);
     store.save({ ...record, contractAddress: contract.address });
-    const tracker = new CashScriptParcelTracker({} as any, store);
+    const tracker = new CashScriptHermes({} as any, store);
     (tracker as any).artifact = artifact;
 
     const cached = (tracker as any).getCachedContract(contract.address);
@@ -88,7 +88,7 @@ describe('CashScriptParcelTracker rehydration', () => {
   });
 
   it('throws on cache miss when no store is configured', () => {
-    const tracker = new CashScriptParcelTracker({} as any);
+    const tracker = new CashScriptHermes({} as any);
 
     expect(() => (tracker as any).getCachedContract('bchtest:contract')).toThrow(/Unknown contract/);
   });

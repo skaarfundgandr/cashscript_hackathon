@@ -15,9 +15,9 @@ COPY packages/shared/ packages/shared/
 COPY packages/backend/ packages/backend/
 COPY tsconfig.base.json tsconfig.base.json
 
-RUN bun run --filter '@parcel-tracker/shared' build
+RUN bun run --filter '@hermes/shared' build
 RUN bun run compile
-RUN bun run --filter '@parcel-tracker/backend' build
+RUN bun run --filter '@hermes/backend' build
 
 FROM oven/bun:1 AS runtime
 WORKDIR /app

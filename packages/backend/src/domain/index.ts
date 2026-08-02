@@ -1,1 +1,1 @@
-export * from '@parcel-tracker/shared';
+export * from '@hermes/shared';

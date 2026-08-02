@@ -1,4 +1,4 @@
-# ParcelTracker v2 — Custody Attestation Layer for E-Commerce Delivery
+# Hermes v2 — Custody Attestation Layer for E-Commerce Delivery
 
 > Hackathon spec. A CashScript/CashTokens utility layer that existing marketplaces and
 > logistics providers can integrate **without asking any end user to own a wallet**.
@@ -109,7 +109,7 @@ One deployment per parcel. All four values are immutable, baked into the locking
 and therefore publicly auditable at the contract address.
 
 ```cashscript
-contract ParcelTracker(
+contract Hermes(
     bytes20 recipientPkh,      // custodial, derived per-delivery by the marketplace
     bytes20 merchantPkh,       // marketplace settlement / return destination
     bytes32 deliveryCodeHash,  // sha256(deliverySecret) — plaintext held ONLY by recipient
@@ -393,7 +393,7 @@ docs for your installed version before assuming this compiles as written.
 ```cashscript
 pragma cashscript ^0.13.0;
 
-contract ParcelTracker(
+contract Hermes(
     bytes20 recipientPkh,
     bytes20 merchantPkh,
     bytes32 deliveryCodeHash,

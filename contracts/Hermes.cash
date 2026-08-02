@@ -1,6 +1,6 @@
 pragma cashscript ^0.13.0;
 
-contract ParcelTracker(
+contract Hermes(
     bytes20 recipientPkh,
     bytes20 merchantPkh,
     bytes32 deliveryCodeHash,

@@ -82,7 +82,7 @@ The missing piece that blocks Stage 3. `reveal-code` and `retry-custody` both re
 `accessToken`, and nothing currently keeps it.
 
 ```ts
-// localStorage key: "parcel-tracker/orders"
+// localStorage key: "hermes/orders"
 type StoredOrders = Record<string /* orderId */, { accessToken: string; createdAt: number }>;
 ```
 
@@ -92,7 +92,7 @@ The my-order route accepts an optional token in the hash query — `#/shop/my-or
 so the link is portable between windows during a demo. Precedence: URL token wins, then
 localStorage, then the recovery state below.
 
-This is the shop's own account, not a magic link, which is what `parcel-tracker-auth.md` §8
+This is the shop's own account, not a magic link, which is what `hermes-auth.md` §8
 specifies and what `FRONTEND-FLOW.md:26` is defending.
 
 ### 3.3 · The custody timeline component

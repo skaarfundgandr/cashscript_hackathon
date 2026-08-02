@@ -1,9 +1,9 @@
-# ParcelTracker — Build Brief
+# Hermes — Build Brief
 
 **Ship by:** 2 PM tomorrow. Everything below is anchored to that.
 
 Read this whole file before writing code. It is short on purpose. The full design lives in
-`parcel-tracker-v2.md` — do not read that tonight unless you are blocked on a detail.
+`hermes-v2.md` — do not read that tonight unless you are blocked on a detail.
 
 ---
 
@@ -39,13 +39,13 @@ designed. They are one roadmap slide, not code.
 
 ## 3. Contract — the four functions
 
-Save as `contracts/ParcelTracker.cash`. Constructor params are **bare** — `recipientPkh`, never
+Save as `contracts/Hermes.cash`. Constructor params are **bare** — `recipientPkh`, never
 `this.recipientPkh`. `this.` is only for `activeInputIndex`, `activeBytecode`, `age`.
 
 ```cashscript
 pragma cashscript ^0.13.0;
 
-contract ParcelTracker(
+contract Hermes(
     bytes20 recipientPkh,
     bytes20 merchantPkh,
     bytes32 deliveryCodeHash,

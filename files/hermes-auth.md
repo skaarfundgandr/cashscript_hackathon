@@ -1,6 +1,6 @@
-# Authentication — ParcelTracker (Couriers, Hub Operators, and Merchant)
+# Authentication — Hermes (Couriers, Hub Operators, and Merchant)
 
-> Companion to the ParcelTracker v2 specification. Covers how **couriers, hub operators, and
+> Companion to the Hermes v2 specification. Covers how **couriers, hub operators, and
 > the merchant** prove identity and sign parcel state transitions.
 >
 > **Recipients are deliberately out of scope.** They authenticate with their existing
@@ -180,7 +180,7 @@ Canonical, domain-bound, and address-bound, so a signature harvested by another 
 replayed against this one:
 
 ```
-ParcelTracker courier login
+Hermes courier login
 Domain: tracker.example.com
 Key: <publicKeyHash hex>
 Nonce: <32 random bytes, hex>

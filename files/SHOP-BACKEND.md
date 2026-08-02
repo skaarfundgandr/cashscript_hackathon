@@ -315,7 +315,7 @@ And the same surface characteristics, so nothing downstream learns a habit it ha
 - Fake parcel ids shaped like a chipnet address — never short ids
 - **Arbitrary courier ids.** A keypair is generated per courier on first use and its pkh becomes
   the `custodian` on the chain. This is the *"device signing key provisioned at onboarding"*
-  model from `parcel-tracker-auth.md` §1
+  model from `hermes-auth.md` §1
 
 ### The B-1 flag
 
@@ -389,7 +389,7 @@ scanner, public page    → ParcelApi → CUSTODY_URL  (:3002 or :3000)
 `config.ts` replaces `select-api.ts`. Selecting the fixture is now a base URL, so there is no
 second implementation to keep faithful.
 
-**Type collision, worth stating.** `@parcel-tracker/shared` exports `type Pkh = Uint8Array`.
+**Type collision, worth stating.** `@hermes/shared` exports `type Pkh = Uint8Array`.
 `domain/parcel.ts` needs `type Pkh = string`. Named imports only — the frontend must never
 `export *` from shared.
 
@@ -413,8 +413,8 @@ No router and no screens. Those are P0 and P3.
 Root scripts:
 
 ```json
-"dev:shop":    "bun run --filter '@parcel-tracker/shop-backend' dev",
-"dev:fixture": "bun run --filter '@parcel-tracker/custody-fixture' dev",
+"dev:shop":    "bun run --filter '@hermes/shop-backend' dev",
+"dev:fixture": "bun run --filter '@hermes/custody-fixture' dev",
 "dev:demo":    "<fixture + shop + frontend, concurrently>"
 ```
 
@@ -431,7 +431,7 @@ Restated from `DATA-LAYER.md` because this document changes how we respond to it
 
 `confirmDelivery` moves the NFT **out of the covenant** to the recipient's P2PKH address — which
 is correct and is what makes `0x04` terminal. But `getParcelHistory`
-(`ParcelTracker.ts:99-104`) only queries UTXOs at the *contract* address:
+(`Hermes.ts:99-104`) only queries UTXOs at the *contract* address:
 
 ```ts
 const utxos = await this.network.getUtxos(contractId);

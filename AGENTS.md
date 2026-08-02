@@ -5,7 +5,7 @@
 ```bash
 bun install                          # all workspaces
 bun run compile                      # .cash → artifacts/ (required before backend runs)
-bun run --filter '@parcel-tracker/shared' build   # MUST run before building/testing dependents
+bun run --filter '@hermes/shared' build   # MUST run before building/testing dependents
 bun run build                        # build all packages (shared first via filter order)
 
 # Per-package
@@ -27,7 +27,7 @@ No linter or formatter is configured. Verification is `bun test` + `bun run buil
 
 ## Build order
 
-`@parcel-tracker/shared` emits `dist/` that every other package imports at runtime. Always build it first. The root `build` script handles this, but running `bun test` or `bun run build` inside a package directly will fail with missing module errors if shared hasn't been built.
+`@hermes/shared` emits `dist/` that every other package imports at runtime. Always build it first. The root `build` script handles this, but running `bun test` or `bun run build` inside a package directly will fail with missing module errors if shared hasn't been built.
 
 ## Architecture
 
@@ -44,13 +44,13 @@ No linter or formatter is configured. Verification is `bun test` + `bun run buil
 - TypeScript strict, ES2022, NodeNext resolution. All relative imports use `.js` extensions.
 - Backend tests live in `src/test/` and are excluded from `tsc` compilation (`tsconfig.json` exclude).
 - `bun:sqlite` is used in backend but `@types/bun` is not installed; an ambient declaration at `src/types/bun-sqlite.d.ts` covers it.
-- The backend's `ParcelTracker.ts` constructor accepts optional `(provider?, store?)` for testability. Tests use a fake provider with real libauth-encoded transactions — no module mocking.
+- The backend's `Hermes.ts` constructor accepts optional `(provider?, store?)` for testability. Tests use a fake provider with real libauth-encoded transactions — no module mocking.
 - `contractId === contract.address` everywhere. The same string is used as both identifiers.
 
 ## Gotchas
 
 - `artifacts/` is gitignored. Run `bun run compile` after cloning or the backend crashes on startup.
-- The backend's in-memory contract cache is now backed by SQLite (`parcel-tracker.db`, also gitignored). Deleting the DB orphans on-chain parcels.
+- The backend's in-memory contract cache is now backed by SQLite (`hermes.db`, also gitignored). Deleting the DB orphans on-chain parcels.
 - `bun dev` uses `--watch`; saving any file restarts the process. Use `bun run packages/backend/src/main.ts` for stable runs.
 - The custody-fixture diverges from the real backend in documented ways — see `packages/custody-fixture/DIVERGENCE.md` before wiring frontend to the real backend.
 - Docker builds copy all 5 workspace manifests before `bun install --frozen-lockfile`; adding a new package requires updating all three Dockerfiles.

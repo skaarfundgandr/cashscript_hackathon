@@ -1,7 +1,7 @@
-# ParcelTracker — BCH Delivery Tracking Smart Contract
+# Hermes — BCH Delivery Tracking Smart Contract
 
 > Hackathon build scope: four contract functions, one parcel, chipnet.
-> Full design with rationale and attack analysis: `files/parcel-tracker-v2.md`.
+> Full design with rationale and attack analysis: `files/hermes-v2.md`.
 > Build brief with checkpoints and demo script: `files/BUILD-TONIGHT.md`.
 
 ---
@@ -28,7 +28,7 @@ P2PKH address, so finality is enforced by construction.
 
 `reject` · `returnToSender` · `confirmReturn` · client-side secret generation (Path A) ·
 courier enrolment funnel · key revocation · auth layer · timeouts · multi-tenancy ·
-mainnet. All designed in `files/parcel-tracker-v2.md`; none built tonight.
+mainnet. All designed in `files/hermes-v2.md`; none built tonight.
 
 ---
 
@@ -50,7 +50,7 @@ For the demo, all keys are fixtures seeded at startup. Nobody installs a wallet.
 ### Constructor
 
 ```cashscript
-contract ParcelTracker(
+contract Hermes(
     bytes20 recipientPkh,      // custodial, derived per-delivery by the marketplace
     bytes20 merchantPkh,       // marketplace settlement / return destination
     bytes32 deliveryCodeHash,  // sha256(deliverySecret) — plaintext held ONLY by recipient
@@ -125,7 +125,7 @@ Four covenant states. Terminal states exit the covenant to a plain P2PKH address
 | 6 | DeliveryPending | ReturnPending | `returnToSender` | Current courier | — |
 | 7 | ReturnPending | **Returned** (exits) | `confirmReturn` | Merchant | — |
 
-Designed in `files/parcel-tracker-v2.md` §4. Not built tonight.
+Designed in `files/hermes-v2.md` §4. Not built tonight.
 
 ---
 
@@ -280,6 +280,6 @@ Deferred: `POST /parcels/:id/return`, `POST /parcels/:id/confirm-return`, `POST 
 
 ## 11. Reference
 
-- Full v2 design: `files/parcel-tracker-v2.md`
+- Full v2 design: `files/hermes-v2.md`
 - Build brief: `files/BUILD-TONIGHT.md`
-- Auth (deferred): `SPEC/AUTH.md`, `files/parcel-tracker-auth.md`
+- Auth (deferred): `SPEC/AUTH.md`, `files/hermes-auth.md`

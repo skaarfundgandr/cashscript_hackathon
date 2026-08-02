@@ -111,11 +111,11 @@ frontend never handles one.
 
 ### `domain/parcel.ts`
 
-`ParcelState` is **imported from `@parcel-tracker/shared`**, not redeclared. The frontend adds
+`ParcelState` is **imported from `@hermes/shared`**, not redeclared. The frontend adds
 only its own labels.
 
 ```ts
-import { ParcelState } from '@parcel-tracker/shared';
+import { ParcelState } from '@hermes/shared';
 
 export type ParcelId = string;   // the contract address, e.g. 'bchtest:qq…'
 export type Pkh = string;        // 20-byte hash160, lowercase hex, no prefix
@@ -387,8 +387,8 @@ than the backend moves the failure to P6, which is the one phase with no slack.
 ### B-1 · A delivered parcel cannot be read — **blocks Stage 4**
 
 `confirmDelivery` moves the NFT **out of the covenant** to the recipient's P2PKH address
-(`ParcelTracker.ts:143-159`, and the contract's `LockingBytecodeP2PKH(recipientPkh)` require).
-`getParcelHistory` (`ParcelTracker.ts:99-104`) only queries UTXOs at the *contract* address:
+(`Hermes.ts:143-159`, and the contract's `LockingBytecodeP2PKH(recipientPkh)` require).
+`getParcelHistory` (`Hermes.ts:99-104`) only queries UTXOs at the *contract* address:
 
 ```ts
 const utxos = await this.network.getUtxos(contractId);

@@ -20,7 +20,7 @@ Three errors stand between a working demo and the real chain. In the order you h
 No spendable BCH UTXO available at bchtest:qp63uahgrxged4z5jswyt5dn5v3lzsem6cq85x00dt; fund the merchant address first
 ```
 
-`ParcelTracker.ts:206-211`. Every `POST /parcel/create` funds a fresh covenant with
+`Hermes.ts:206-211`. Every `POST /parcel/create` funds a fresh covenant with
 `PARCEL_FUNDING_SATOSHIS` (25 000) + `FEE_SATS` (2 000) from the merchant fixture address, derived
 from private key `0x00…01`.
 
@@ -38,8 +38,8 @@ That degradation is deliberate — see `SHOP-BACKEND.md`, *Checkout*.
 Unknown contract bchtest:p…; deploy the parcel in this process before transitioning it
 ```
 
-`ParcelTracker.ts:215-221`. `deploy` caches the `Contract` instance in a `Map` keyed by address
-(`ParcelTracker.ts:70`), and all four transitions read from that map. It is never rehydrated from
+`Hermes.ts:215-221`. `deploy` caches the `Contract` instance in a `Map` keyed by address
+(`Hermes.ts:70`), and all four transitions read from that map. It is never rehydrated from
 chain state.
 
 So a parcel minted before a restart is **alive on chain but untransitionable** — the covenant
@@ -59,7 +59,7 @@ does not share this failure, which makes it a divergence the fixture hides.
 No parcel NFT UTXO found for contract bchtest:p…
 ```
 
-`ParcelTracker.ts:99-104`. `getParcelHistory` locates the live NFT **at the contract address** and
+`Hermes.ts:99-104`. `getParcelHistory` locates the live NFT **at the contract address** and
 walks backwards from it:
 
 ```ts
@@ -71,7 +71,7 @@ if (!nftUtxo || !nftUtxo.token?.nft) {
 ```
 
 `confirmDelivery` sends that NFT out of the covenant to the recipient's P2PKH address
-(`ParcelTracker.ts:143-159`):
+(`Hermes.ts:143-159`):
 
 ```ts
 const recipientAddress = encodeCashAddress({ prefix: BCH_TEST_PREFIX, type: 'p2pkh', payload: recipientPkh }).address;
@@ -86,7 +86,7 @@ leaves.
 
 ### Why it costs more than the last hop
 
-The walk starts at the tip and `unshift`s backwards through `getRawTransaction` (`ParcelTracker.ts:105-113`).
+The walk starts at the tip and `unshift`s backwards through `getRawTransaction` (`Hermes.ts:105-113`).
 The tip is not merely the newest row — it is the **entry point to every row**. Lose it and the
 whole reconstruction has no starting point.
 
