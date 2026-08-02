@@ -1,3 +1,4 @@
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Children, useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
 
 import { shortHash } from './couriers.js';
@@ -31,6 +32,25 @@ export function CourierButton({ variant = 'ghost', block, icon, children, classN
   );
 }
 
+/** Copy confirmation, animated: the tick replaces the clipboard rather than blinking into it. */
+function CopyFeedback({ copied }: { copied: boolean }) {
+  const reduced = useReducedMotion();
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.span
+        key={copied ? 'copied' : 'idle'}
+        style={{ display: 'inline-flex' }}
+        initial={reduced ? false : { opacity: 0, scale: 0.6 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={reduced ? undefined : { opacity: 0, scale: 0.6 }}
+        transition={{ duration: 0.15, ease: 'easeOut' }}
+      >
+        {copied ? <CheckIcon className="c-hash-icon" /> : <CopyIcon className="c-hash-icon" />}
+      </motion.span>
+    </AnimatePresence>
+  );
+}
+
 /**
  * Mono, middle-truncated, click-to-copy. Hashes are the only thing on this surface a courier might
  * need to read out loud, so the full value is always one tap away and never silently shortened
@@ -52,7 +72,7 @@ export function HashValue({ value, lead = 8, tail = 6, full }: { value: string; 
   return (
     <button type="button" className="c-hash" onClick={copy} title={value} aria-label={`Copy ${value}`}>
       <span>{full ? value : shortHash(value, lead, tail)}</span>
-      {copied ? <CheckIcon className="c-hash-icon" /> : <CopyIcon className="c-hash-icon" />}
+      <CopyFeedback copied={copied} />
     </button>
   );
 }

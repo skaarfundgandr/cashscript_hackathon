@@ -1,3 +1,4 @@
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { setDemoRole, type DemoRole } from './infrastructure/demo-role.js';
@@ -79,27 +80,34 @@ export function Router() {
     navigate(nextRole === 'buyer' ? '/shop' : nextRole === 'merchant' ? '/merchant/orders' : '/courier');
   };
 
-  if (route.kind === 'shop') return <RoleSurface role={role} onChooseRole={chooseRole}><Marketplace
-    category={route.category}
-    onOpenProduct={(productId) => navigate(`/shop/product/${encodeURIComponent(productId)}`)}
-    onBrowseCategory={(category) => navigate(`/shop?category=${encodeURIComponent(category)}`)}
-  /></RoleSurface>;
-  if (route.kind === 'product') {
-    return <RoleSurface role={role} onChooseRole={chooseRole}><Marketplace
-      productId={route.productId}
-      onOpenProduct={(productId) => navigate(`/shop/product/${encodeURIComponent(productId)}`)}
-      onCloseProduct={() => navigate('/shop')}
-      onBrowseCategory={(category) => navigate(`/shop?category=${encodeURIComponent(category)}`)}
-      onCheckout={(orderId) => navigate(`/shop/order/${encodeURIComponent(orderId)}`)}
-    /></RoleSurface>;
-  }
-  if (route.kind === 'order') return <RoleSurface role={role} onChooseRole={chooseRole}><OrderPage orderId={route.orderId} onTrackOrder={() => navigate(`/shop/my-order/${encodeURIComponent(route.orderId)}`)} /></RoleSurface>;
-  if (route.kind === 'my-order') return <RoleSurface role={role} onChooseRole={chooseRole}><MyOrderPage orderId={route.orderId} urlToken={route.token} /></RoleSurface>;
-  if (route.kind === 'my-orders') return <RoleSurface role={role} onChooseRole={chooseRole}><MyOrdersPage onOpenOrder={(orderId) => navigate(`/shop/my-order/${encodeURIComponent(orderId)}`)} /></RoleSurface>;
-  if (route.kind === 'merchant-orders') return <RoleSurface role={role} onChooseRole={chooseRole}><MerchantOrdersPage /></RoleSurface>;
-  if (route.kind === 'courier') return <RoleSurface role={role} onChooseRole={chooseRole}><CourierApp /></RoleSurface>;
+  // The public record is nobody's surface — it renders bare, with no role chrome, because that
+  // is exactly what an outsider holding the link sees.
   if (route.kind === 'public-lookup') return <PublicLookup onOpen={(parcelId) => navigate(`/p/${encodeURIComponent(parcelId)}`)} />;
-  return <PublicParcelPage parcelId={route.parcelId} />;
+  if (route.kind === 'public') return <PublicParcelPage parcelId={route.parcelId} />;
+
+  const surface = (() => {
+    switch (route.kind) {
+      case 'shop': return <Marketplace
+        category={route.category}
+        onOpenProduct={(productId) => navigate(`/shop/product/${encodeURIComponent(productId)}`)}
+        onBrowseCategory={(category) => navigate(`/shop?category=${encodeURIComponent(category)}`)}
+      />;
+      case 'product': return <Marketplace
+        productId={route.productId}
+        onOpenProduct={(productId) => navigate(`/shop/product/${encodeURIComponent(productId)}`)}
+        onCloseProduct={() => navigate('/shop')}
+        onBrowseCategory={(category) => navigate(`/shop?category=${encodeURIComponent(category)}`)}
+        onCheckout={(orderId) => navigate(`/shop/order/${encodeURIComponent(orderId)}`)}
+      />;
+      case 'order': return <OrderPage orderId={route.orderId} onTrackOrder={() => navigate(`/shop/my-order/${encodeURIComponent(route.orderId)}`)} />;
+      case 'my-order': return <MyOrderPage orderId={route.orderId} urlToken={route.token} />;
+      case 'my-orders': return <MyOrdersPage onOpenOrder={(orderId) => navigate(`/shop/my-order/${encodeURIComponent(orderId)}`)} />;
+      case 'merchant-orders': return <MerchantOrdersPage />;
+      case 'courier': return <CourierApp />;
+    }
+  })();
+
+  return <RoleSurface role={role} onChooseRole={chooseRole}>{surface}</RoleSurface>;
 }
 
 function roleForRoute(route: Route): DemoRole {
@@ -108,8 +116,26 @@ function roleForRoute(route: Route): DemoRole {
   return 'buyer';
 }
 
+/**
+ * The role strip is persistent chrome and never animates — only the surface under it does.
+ * Keyed by role, not by route: moving between a role's own pages is ordinary navigation, but
+ * changing who you are is the biggest context switch in the app and earns a handoff.
+ */
 function RoleSurface({ role, onChooseRole, children }: { role: DemoRole; onChooseRole: (role: DemoRole) => void; children: ReactNode }) {
-  return <><DemoRoleSwitcher role={role} onChange={onChooseRole} />{children}</>;
+  const reduced = useReducedMotion();
+
+  return <>
+    <DemoRoleSwitcher role={role} onChange={onChooseRole} />
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={role}
+        initial={reduced ? false : { opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={reduced ? undefined : { opacity: 0, y: -8 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
+      >{children}</motion.div>
+    </AnimatePresence>
+  </>;
 }
 
 function Placeholder({ label }: { label: string }) {

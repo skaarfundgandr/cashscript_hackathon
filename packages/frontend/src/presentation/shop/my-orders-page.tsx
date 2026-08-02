@@ -4,6 +4,7 @@
 // token written at checkout is the only proof of ownership. This page lists ids and fetches
 // each order fresh; it can only ever show what this browser bought.
 
+import { motion, useReducedMotion } from 'motion/react';
 import { useEffect, useState } from 'react';
 
 import { parcelStateLabel } from '../../domain/parcel.js';
@@ -24,6 +25,7 @@ interface OrderStatus {
 
 export function MyOrdersPage({ onOpenOrder }: { onOpenOrder: (orderId: string) => void }) {
   const [rows, setRows] = useState<OrderRow[] | null>(null);
+  const reduced = useReducedMotion();
 
   useEffect(() => {
     let cancelled = false;
@@ -58,16 +60,23 @@ export function MyOrdersPage({ onOpenOrder }: { onOpenOrder: (orderId: string) =
           <p>Orders appear here on the device that placed them. Browse the shop and buy something to start one.</p>
         </div>
       : <div className="shop-orders-list">
-          {rows.map(({ orderId, order }) => {
+          {rows.map(({ orderId, order }, position) => {
             const status = order ? statusOf(order) : { label: 'Could not load', tone: 'error' };
-            return <button type="button" className="shop-order-card" key={orderId} onClick={() => onOpenOrder(orderId)}>
+            {/* Stagger capped at 8 rows so a long history never leaves the last card waiting. */}
+            return <motion.button
+              type="button" className="shop-order-card" key={orderId} onClick={() => onOpenOrder(orderId)}
+              initial={reduced ? false : { opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.22, ease: 'easeOut', delay: Math.min(position, 7) * 0.04 }}
+              whileTap={reduced ? undefined : { scale: 0.98 }}
+            >
               {order && <img className="shop-order-art" src={order.product.imageUrl} alt="" />}
               <span className="shop-order-body">
                 <strong>{order ? order.product.name : `Order #${orderId}`}</strong>
                 <span>#{orderId}{order ? ` · ${formatDate(order.createdAt)}` : ''}</span>
               </span>
               <span className="shop-order-state" data-tone={status.tone}>{status.label}</span>
-            </button>
+            </motion.button>
           })}
         </div>}
   </main>;

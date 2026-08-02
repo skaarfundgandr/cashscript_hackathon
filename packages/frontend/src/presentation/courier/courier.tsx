@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { apiClient, type ParcelChainEntry } from '../../infrastructure/api-client.js';
@@ -99,6 +99,8 @@ function Terminal({ courier, onSignOut }: { courier: CourierIdentity; onSignOut:
    */
   const [declined, setDeclined] = useState<Set<string>>(() => readDeclined(courier.id));
 
+  const reduced = useReducedMotion();
+
   const noticeTimer = useRef(0);
   const notify = useCallback((tone: Notice['tone'], text: string) => {
     window.clearTimeout(noticeTimer.current);
@@ -168,6 +170,7 @@ function Terminal({ courier, onSignOut }: { courier: CourierIdentity; onSignOut:
     }
 
     if (payload.t === 'parcel') {
+      notify('ok', `Label scanned · ${shortParcelId(payload.id)}`);
       openParcel(payload.id);
       return;
     }
@@ -193,6 +196,7 @@ function Terminal({ courier, onSignOut }: { courier: CourierIdentity; onSignOut:
       const next = courierByPkh(badgePkh) ?? resolveCourier(payload.id);
       const nextKey = next?.custodyKey ?? payload.id;
       const nextName = next?.name ?? payload.name ?? `Courier ${shortHash(badgePkh, 6, 4)}`;
+      notify('ok', `Badge scanned · ${nextName}`);
       setArm(null);
       setPending({
         stage: 'confirm',
@@ -217,6 +221,7 @@ function Terminal({ courier, onSignOut }: { courier: CourierIdentity; onSignOut:
       notify('error', 'That code belongs to a different parcel.');
       return;
     }
+    notify('ok', 'Delivery code scanned · confirm to close the parcel');
     setArm(null);
     setPending({
       stage: 'confirm',
@@ -393,15 +398,18 @@ function Terminal({ courier, onSignOut }: { courier: CourierIdentity; onSignOut:
         )}
       </main>
 
-      <AnimatePresence>
+      {/* Keyed by text so a second scan re-plays the entrance instead of silently swapping the
+          words — every scan is its own acknowledgement. Same motion as the app's toast. */}
+      <AnimatePresence mode="wait">
         {notice && (
           <motion.p
             className={`c-notice c-notice-${notice.tone}`}
+            key={notice.text}
             role="status"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
-            transition={{ duration: 0.18 }}
+            initial={reduced ? false : { opacity: 0, x: 40, scale: 0.97 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={reduced ? undefined : { opacity: 0, y: 10 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
           >
             {notice.text}
           </motion.p>

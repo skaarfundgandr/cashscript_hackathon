@@ -1,3 +1,4 @@
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useState } from 'react';
 
 import { CustodyTimeline, currentParcelState } from '../../components/custody/custody-timeline.js';
@@ -16,6 +17,15 @@ export function MyOrderPage({ orderId, urlToken }: { orderId: string; urlToken: 
   const [revealed, setRevealed] = useState<{ secret: string; revealedAt: number } | null>(null);
   const [isRevealing, setIsRevealing] = useState(false);
   const toast = useToast();
+  const reduced = useReducedMotion();
+
+  /** Same step vocabulary as the badge dialog: short, easeOut, off under reduced motion. */
+  const step = {
+    initial: reduced ? false as const : { opacity: 0, y: 8 },
+    animate: { opacity: 1, y: 0 },
+    exit: reduced ? undefined : { opacity: 0 },
+    transition: { duration: 0.18, ease: 'easeOut' as const },
+  };
 
   if (isLoading && !order) return <OrderLoading />;
   if (error && !order) return error instanceof ShopApiError && error.status === 404 ? <OrderNotFound /> : <OrderProblem message={error.message} />;
@@ -51,16 +61,29 @@ export function MyOrderPage({ orderId, urlToken }: { orderId: string; urlToken: 
         at 0x02 on its own — useOrder keeps polling the chain until the record is terminal. */}
     {order.parcelId && <section className="shop-delivery-code">
       <p className="shop-eyebrow">Delivery code</p>
-      {!canReveal ? <p>Your delivery code unlocks when the courier marks this parcel out for delivery. Keep this page open — it updates on its own.</p> : <>
-        {revealed ? <>
-          <div className="shop-delivery-code-content"><QrCode value={{ t: 'delivery', id: order.parcelId, secret: revealed.secret }} label="Delivery code QR" /><p>Revealed {formatTime(revealed.revealedAt)}</p></div>
-        </> : <>
-          {order.revealedAt !== null && <p>Revealed {formatTime(order.revealedAt)}. The code is not shown after a refresh.</p>}
-          {accessToken ? <button type="button" className="shop-button" onClick={() => void reveal()} disabled={isRevealing}>{isRevealing ? 'Revealing…' : order.revealedAt === null ? 'Reveal code' : 'Reveal code again'}</button>
-            : <p>Open this on the device you ordered from to reveal the delivery code.</p>}
-        </>}
-        <p className="shop-secret-warning">Anyone holding this code can confirm delivery. Show it only to the courier at your door.</p>
-      </>}
+      {/* Locked → unlocked → revealed each cross-fade: the section's state changes are moments
+          the buyer notices, not silent swaps. The QR itself lands with a small pop. */}
+      <AnimatePresence initial={false} mode="wait">
+      {!canReveal
+        ? <motion.p key="locked" {...step}>Your delivery code unlocks when the courier marks this parcel out for delivery. Keep this page open — it updates on its own.</motion.p>
+        : revealed ? <motion.div key="revealed" {...step}>
+            <div className="shop-delivery-code-content">
+              <motion.div
+                initial={reduced ? false : { opacity: 0, scale: 0.94 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.24, ease: 'easeOut', delay: reduced ? 0 : 0.08 }}
+              ><QrCode value={{ t: 'delivery', id: order.parcelId, secret: revealed.secret }} label="Delivery code QR" /></motion.div>
+              <p>Revealed {formatTime(revealed.revealedAt)}</p>
+            </div>
+            <p className="shop-secret-warning">Anyone holding this code can confirm delivery. Show it only to the courier at your door.</p>
+          </motion.div>
+        : <motion.div key="unlocked" {...step}>
+            {order.revealedAt !== null && <p>Revealed {formatTime(order.revealedAt)}. The code is not shown after a refresh.</p>}
+            {accessToken ? <button type="button" className="shop-button" onClick={() => void reveal()} disabled={isRevealing}>{isRevealing ? 'Revealing…' : order.revealedAt === null ? 'Reveal code' : 'Reveal code again'}</button>
+              : <p>Open this on the device you ordered from to reveal the delivery code.</p>}
+            <p className="shop-secret-warning">Anyone holding this code can confirm delivery. Show it only to the courier at your door.</p>
+          </motion.div>}
+      </AnimatePresence>
     </section>}
     {order.parcelId && <PublicRecordLink parcelId={order.parcelId} />}
     {!accessToken && <p className="shop-recovery-note">Open this on the device you ordered from to manage your delivery code.</p>}

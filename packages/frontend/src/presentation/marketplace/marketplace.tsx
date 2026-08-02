@@ -14,7 +14,7 @@ import {
   type MarketplaceState,
   type SortKey,
 } from './data.js';
-import { FilterIcon, HeartIcon, SearchIcon, ShieldIcon, StarIcon } from './skin-a-icons.js';
+import { CheckIcon, FilterIcon, HeartIcon, SearchIcon, ShieldIcon, StarIcon } from './skin-a-icons.js';
 import { shopApi } from '../../infrastructure/api-client.js';
 
 const MERCHANT = 'Northbay Supply';
@@ -91,12 +91,15 @@ function ProductDetail({
   onCategory,
   onBuy,
   isCheckoutLoading,
+  placed,
 }: {
   product: MarketplaceProduct;
   onBack: () => void;
   onCategory: (category: string) => void;
   onBuy: () => void;
   isCheckoutLoading: boolean;
+  /** The order landed; hold the confirmation until the page hands off. */
+  placed: boolean;
 }) {
   const [selectedThumbnail, setSelectedThumbnail] = useState(0);
 
@@ -170,7 +173,31 @@ function ProductDetail({
               <dt>Courier</dt><dd>Assigned by the merchant after checkout</dd>
             </dl>
             <div className="marketplace-detail-actions">
-              <Button type="button" className="marketplace-buy-button" onClick={onBuy} disabled={isCheckoutLoading}>{isCheckoutLoading ? 'Placing order…' : 'Buy now'}</Button>
+              {/* Buying is the demo's opening move and the one call that mints a parcel, so the
+                  button carries the wait itself: a spinner and a label that swap in place. */}
+              <motion.div
+                className={`marketplace-buy-wrap${placed ? ' is-placed' : ''}`}
+                whileTap={isCheckoutLoading ? undefined : { scale: 0.98 }}
+                animate={placed ? { scale: [1, 1.03, 1] } : { scale: 1 }}
+                transition={{ duration: 0.34, ease: 'easeOut' }}
+              >
+                <Button type="button" className="marketplace-buy-button" onClick={onBuy} disabled={isCheckoutLoading}>
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.span
+                      className="marketplace-buy-label"
+                      key={placed ? 'placed' : isCheckoutLoading ? 'placing' : 'idle'}
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -5 }}
+                      transition={{ duration: 0.15, ease: 'easeOut' }}
+                    >
+                      {placed
+                        ? <><CheckIcon />Order placed</>
+                        : <>{isCheckoutLoading && <span className="marketplace-spinner" aria-hidden="true" />}{isCheckoutLoading ? 'Placing order…' : 'Buy now'}</>}
+                    </motion.span>
+                  </AnimatePresence>
+                </Button>
+              </motion.div>
               <Button type="button" variant="outline" size="icon" aria-label="Save"><HeartIcon /></Button>
             </div>
             <div className="marketplace-custody-note">
@@ -200,6 +227,9 @@ function ProductDetail({
   );
 }
 
+/** How long the "Order placed" confirmation holds before the order page takes over. */
+const CONFIRM_MS = 900;
+
 export function Marketplace({
   productId = null,
   category = null,
@@ -221,6 +251,8 @@ export function Marketplace({
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [productsError, setProductsError] = useState<string | null>(null);
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
+  /** Held between a successful checkout and the navigation, so the confirmation is seen. */
+  const [placed, setPlaced] = useState(false);
   const toast = useToast();
   const results = useMemo(() => apply(products, state), [products, state]);
   const categories = useMemo(() => categoriesOf(products), [products]);
@@ -278,17 +310,22 @@ export function Marketplace({
       .then(({ orderId, accessToken }) => {
         storeOrder(orderId, accessToken);
         toast.success(`Order #${orderId} placed`, 'The merchant will approve it before dispatch.');
-        onCheckout(orderId);
+        // `placed` plays the confirmation over the detail page; navigation waits for it, so the
+        // order page is not already on screen while the tick is still animating.
+        setPlaced(true);
+        window.setTimeout(() => onCheckout(orderId), CONFIRM_MS);
       })
-      .catch((error: unknown) => toast.error('Could not place order', error instanceof Error ? error.message : String(error)))
-      .finally(() => setIsCheckoutLoading(false));
+      .catch((error: unknown) => {
+        toast.error('Could not place order', error instanceof Error ? error.message : String(error));
+        setIsCheckoutLoading(false);
+      });
   };
 
   return (
     <div className="marketplace">
       <AnimatePresence mode="wait" initial={false}>
         {selectedProduct ? (
-          <ProductDetail key={selectedProduct.id} product={selectedProduct} onBack={closeProduct} onCategory={browseCategory} onBuy={buyProduct} isCheckoutLoading={isCheckoutLoading} />
+          <ProductDetail key={selectedProduct.id} product={selectedProduct} onBack={closeProduct} onCategory={browseCategory} onBuy={buyProduct} isCheckoutLoading={isCheckoutLoading} placed={placed} />
         ) : <motion.div key="catalogue" initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -18 }} transition={{ duration: 0.2, ease: 'easeOut' }}>
       <header className="marketplace-topbar">
         <div className="marketplace-brand">{MERCHANT}</div>

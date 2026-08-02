@@ -144,7 +144,23 @@
 .marketplace-specs dt { margin: 0; color: hsl(var(--muted-foreground)); }
 .marketplace-specs dd { margin: 0; font-weight: 500; }
 .marketplace-detail-actions { display: flex; gap: 10px; margin-top: 28px; }
-.marketplace-buy-button { flex: 1; height: 46px; border: 0; background: hsl(var(--primary)) !important; color: hsl(var(--primary-foreground)) !important; font-size: 15px; }
+/* The wrapper carries the flex sizing now that the button sits inside a tap-scale element. */
+.marketplace-buy-wrap { flex: 1; }
+.marketplace-buy-button { width: 100%; height: 46px; border: 0; background: hsl(var(--primary)) !important; color: hsl(var(--primary-foreground)) !important; font-size: 15px; }
+/* Fixed height keeps the label swap from resizing the button mid-transition. */
+.marketplace-buy-label { display: inline-flex; align-items: center; gap: 9px; height: 20px; }
+.marketplace-buy-label svg { width: 17px; height: 17px; }
+/* Confirmation reads as success, not as the ordinary primary action. */
+.marketplace-buy-wrap.is-placed .marketplace-buy-button { background: #16a34a !important; }
+.marketplace-spinner {
+  width: 15px; height: 15px;
+  border: 2px solid hsl(var(--primary-foreground) / .32);
+  border-top-color: hsl(var(--primary-foreground));
+  border-radius: 50%;
+  animation: marketplace-spin .6s linear infinite;
+}
+@keyframes marketplace-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .marketplace-spinner { animation-duration: 2s; } }
 .marketplace-buy-button:hover { background: hsl(var(--primary) / .9) !important; }
 .marketplace-detail-actions > button:last-child { width: 46px; height: 46px; border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) - 2px); background: hsl(var(--background)) !important; }
 .marketplace-detail-actions > button:last-child:hover { background: hsl(var(--accent)) !important; }

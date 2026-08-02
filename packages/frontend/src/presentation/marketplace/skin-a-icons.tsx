@@ -18,6 +18,11 @@ export function ShieldIcon(props: IconProps) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="m12 2.5 7.5 3v6c0 4.6-3.1 8.6-7.5 10-4.4-1.4-7.5-5.4-7.5-10v-6z" /><path d="m9 12 2.2 2.2 4.3-4.2" /></svg>;
 }
 
+/** Draws itself in via pathLength when animated — the checkout confirmation. */
+export function CheckIcon(props: IconProps) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="m4.5 12.5 5 5 10-11" /></svg>;
+}
+
 export function HeartIcon(props: IconProps) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M20.3 5.6a5 5 0 0 0-7.1 0L12 6.8l-1.2-1.2a5 5 0 0 0-7.1 7.1l8.3 8.3 8.3-8.3a5 5 0 0 0 0-7.1z" /></svg>;
 }

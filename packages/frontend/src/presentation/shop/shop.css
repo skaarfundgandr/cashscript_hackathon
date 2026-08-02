@@ -1,9 +1,26 @@
 :root { background: hsl(var(--background)); }
 body { margin: 0; background: hsl(var(--background)); }
 
+/* Every press is acknowledged physically, app-wide — including anchors styled as buttons, which
+   the element selector alone would miss. Framer's whileTap wins where present (inline transform
+   overrides), so the two never fight. */
+@media (prefers-reduced-motion: no-preference) {
+  button, a.shop-button, .pv-pill, .shop-order-card {
+    transition: transform .1s ease;
+  }
+  button:active:not(:disabled),
+  a.shop-button:active,
+  .pv-pill:active,
+  .shop-order-card:active {
+    transform: scale(.97);
+  }
+}
+
 .demo-role-switcher { display: flex; align-items: center; justify-content: flex-end; gap: 9px; min-height: 38px; padding: 7px 24px; border-bottom: 1px solid hsl(var(--border)); background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); font: 600 12px/1 ui-sans-serif, system-ui, sans-serif; letter-spacing: .04em; text-transform: uppercase; }
 .demo-role-switcher select { height: 26px; padding: 0 24px 0 7px; border: 1px solid hsl(var(--border)); border-radius: 5px; background: hsl(var(--background)); color: hsl(var(--foreground)); font: 600 12px/1 ui-sans-serif, system-ui, sans-serif; letter-spacing: normal; text-transform: none; }
 .demo-role-switcher small { color: hsl(var(--muted-foreground)); font-size: 10px; font-weight: 500; letter-spacing: normal; text-transform: none; }
+/* Fixed width so the label swapping on a role change cannot shift the strip's layout. */
+.demo-role-now { display: inline-block; min-width: 108px; }
 
 .shop-page, .shop-placeholder {
   width: min(880px, calc(100% - 40px));

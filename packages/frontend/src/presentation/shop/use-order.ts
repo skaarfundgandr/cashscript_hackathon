@@ -25,8 +25,12 @@ export function useOrder(orderId: string, accessToken: string | null) {
       try {
         const nextOrder = await shopApi.getOrder(orderId);
         if (cancelled) return;
-        setOrder(nextOrder);
-        setError(null);
+        // Only publish a genuinely different order. The payload is freshly parsed JSON every
+        // poll, so identity always changes while the content usually does not — and handing
+        // React a new object re-renders the timeline and its layout animations underneath
+        // whatever the buyer is doing.
+        setOrder((current) => JSON.stringify(current) === JSON.stringify(nextOrder) ? current : nextOrder);
+        setError((current) => current === null ? current : null);
         setIsLoading(false);
 
         // Approved but unattached: the mint is in flight, poll fast and give up loudly.

@@ -1,3 +1,4 @@
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import jtExpressLogo from '../../assets/couriers/jt-express-demo.png';
@@ -22,8 +23,16 @@ export function MerchantOrdersPage() {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<OrderSort>('newest');
   const toast = useToast();
+  const reduced = useReducedMotion();
 
-  /** Background refreshes stay silent: no skeleton flash, and a failed tick just waits for the next. */
+  /**
+   * Background refreshes stay silent: no skeleton flash, and a failed tick waits for the next.
+   *
+   * A poll that finds nothing new must not touch state at all. Re-setting an identical list
+   * still hands React fresh object identities, which re-renders every card and re-measures the
+   * layout animations underneath whatever the merchant is doing. Comparing first means a quiet
+   * queue is genuinely quiet, and only a real change moves the page.
+   */
   const loadOrders = useCallback((background = false) => {
     if (!background) {
       setIsLoading(true);
@@ -31,9 +40,9 @@ export function MerchantOrdersPage() {
     }
     void Promise.all([shopApi.getPendingOrders(), shopApi.getCouriers()])
       .then(([pendingOrders, availableCouriers]) => {
-        setOrders(pendingOrders);
-        setCouriers(availableCouriers);
-        setError(null);
+        setOrders((current) => same(current, pendingOrders) ? current : pendingOrders);
+        setCouriers((current) => same(current, availableCouriers) ? current : availableCouriers);
+        setError((current) => current === null ? current : null);
       })
       .catch((cause: unknown) => { if (!background) setError(cause instanceof Error ? cause.message : String(cause)); })
       .finally(() => { if (!background) setIsLoading(false); });
@@ -114,26 +123,55 @@ export function MerchantOrdersPage() {
           <p>New orders appear here on their own.</p>
         </section>
       : visibleOrders.length === 0 ? <div className="shop-empty"><h2>No orders found</h2><p>Try a different order number, customer, or address.</p></div>
-      : <ol className="merchant-order-list">{visibleOrders.map((order) => {
+      : <ol className="merchant-order-list">
+        {/* Arrivals rise in as the poll finds them; approvals collapse out. The action the
+            merchant just took, and the work arriving for them, are both visible as movement. */}
+        <AnimatePresence initial={false} mode="popLayout">
+        {visibleOrders.map((order) => {
         const assignedCourier = couriers.find((courier) => courier.id === assignments[order.orderId]) ?? null;
-        return <li key={order.orderId} className="merchant-order-card">
+        return <motion.li
+          key={order.orderId} className="merchant-order-card"
+          layout={!reduced}
+          initial={reduced ? false : { opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={reduced ? undefined : { opacity: 0, scale: 0.98 }}
+          transition={{ duration: 0.24, ease: 'easeOut' }}
+        >
           <div className="merchant-order-product"><img src={order.product.imageUrl} alt="" /><div><span className="merchant-status">New order · needs approval</span><h2>{order.product.name}</h2><p>Order #{order.orderId} · placed {formatDate(order.createdAt)}</p></div></div>
           <dl className="merchant-order-details"><div><dt>Customer</dt><dd>{order.buyer.name}</dd></div><div><dt>Delivery</dt><dd>{order.buyer.address}</dd></div></dl>
           <section className="merchant-dispatch-panel" aria-label={`Dispatch order #${order.orderId}`}>
             <p className="shop-eyebrow">Dispatch parcel</p>
+            <AnimatePresence initial={false} mode="wait">
             {assignedCourier
-              ? <div className="merchant-assigned-row">
+              ? <motion.div
+                  className="merchant-assigned-row" key="assigned"
+                  initial={reduced ? false : { opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={reduced ? undefined : { opacity: 0 }}
+                  transition={{ duration: 0.18, ease: 'easeOut' }}
+                >
                   <CourierBrand courier={assignedCourier} />
                   <Button type="button" variant="ghost" size="sm" onClick={() => setScanningOrderId(order.orderId)}>Rescan</Button>
-                </div>
-              : <Button type="button" variant="outline" className="merchant-scan-badge-button" onClick={() => setScanningOrderId(order.orderId)}>Scan courier badge</Button>}
+                </motion.div>
+              : <motion.div
+                  key="unassigned"
+                  initial={reduced ? false : { opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={reduced ? undefined : { opacity: 0 }}
+                  transition={{ duration: 0.14, ease: 'easeOut' }}
+                >
+                  <Button type="button" variant="outline" className="merchant-scan-badge-button" onClick={() => setScanningOrderId(order.orderId)}>Scan courier badge</Button>
+                </motion.div>}
+            </AnimatePresence>
             <Button type="button" className="merchant-approve-button" onClick={() => void approve(order.orderId)} disabled={!assignedCourier || approvingOrderId !== null}>{approvingOrderId === order.orderId ? 'Creating parcel…' : 'Approve & create parcel'}</Button>
             <p className="merchant-dispatch-note">{assignedCourier
               ? 'Approval creates the custody record and prepares the parcel label for packing.'
               : 'The courier taking this parcel shows their badge — they open “My badge” in the courier terminal.'}</p>
           </section>
-        </li>;
-      })}</ol>}
+        </motion.li>;
+      })}
+        </AnimatePresence>
+      </ol>}
     {scanningOrderId && <BadgeScanDialog
       couriers={couriers}
       onCancel={() => setScanningOrderId(null)}
@@ -144,6 +182,15 @@ export function MerchantOrdersPage() {
       }}
     />}
   </main>;
+}
+
+/**
+ * Whether a poll returned the same data it returned last time. Structural, not referential:
+ * the payload is freshly parsed JSON every request, so identity always differs while the
+ * content usually does not.
+ */
+function same<T>(current: T[], next: T[]): boolean {
+  return current.length === next.length && JSON.stringify(current) === JSON.stringify(next);
 }
 
 function InboxIcon() {
